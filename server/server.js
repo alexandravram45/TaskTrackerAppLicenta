@@ -1,18 +1,31 @@
 const express = require("express");
 const app = express();
+require('dotenv/config');
+const { authenticate } = require('./middleware/auth.js');
 const cors = require("cors");
-app.use(cors());
-app.use(express.json());
-const PORT = 5000;
-const taskRoute = require('./tasks/route');
-
-const Task = require('./tasks/task.model')
-
+const cookieParser = require('cookie-parser');
 const mongoose = require("mongoose");
 
-const Db = "mongodb+srv://alexandravram:03042001Ale@tasktrackercluster.wal4azi.mongodb.net/?retryWrites=true&w=majority";
 
-mongoose.connect(Db)
+const taskRoutes = require('./tasks/route');
+const userRoutes = require('./user/route');
+const authRoute = require('./user/user.js')
+const userAuth = require('./middleware/auth.js')
+
+app.use(cors({
+    origin: 'http://localhost:3000',  // Replace with the actual origin of your client application
+    credentials: true,
+  }));
+
+app.use(cookieParser());
+app.use(express.json());
+
+app.use(cookieParser());
+
+const db = process.env.DB_URI
+const port = process.env.PORT
+
+mongoose.connect(db)
     .then(() => {
         console.log('Connected to MongoDB');
     })
@@ -21,12 +34,19 @@ mongoose.connect(Db)
     });
 
 
-app.use('/tasks', taskRoute)
+app.use('/tasks', taskRoutes)
+app.use('/user', userRoutes)
 
-app.get('/', (req, res) => {
-    res.send("hello there!")
-});
+app.get('/profile', authenticate, (req, res) => {
+    console.log(req.user)
+    res.status(200).json({ 
+        message: `Welcome ${req.user.username}`,
+        user: req.user
+    });
+  });
+  
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
 });
