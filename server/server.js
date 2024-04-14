@@ -5,12 +5,12 @@ const { authenticate } = require('./middleware/auth.js');
 const cors = require("cors");
 const cookieParser = require('cookie-parser');
 const mongoose = require("mongoose");
-
+const { confirmEmail } = require('./user/controller.js')
 
 const taskRoutes = require('./tasks/route');
 const userRoutes = require('./user/route');
-const authRoute = require('./user/user.js')
-const userAuth = require('./middleware/auth.js')
+const boardRoutes = require('./boards/route.js');
+const columnroutes = require('./columns/route.js');
 
 app.use(cors({
     origin: 'http://localhost:3000',  // Replace with the actual origin of your client application
@@ -36,6 +36,9 @@ mongoose.connect(db)
 
 app.use('/tasks', taskRoutes)
 app.use('/user', userRoutes)
+app.use('/board', boardRoutes)
+app.use('/column', columnroutes)
+
 
 app.get('/profile', authenticate, (req, res) => {
     console.log(req.user)
@@ -44,8 +47,14 @@ app.get('/profile', authenticate, (req, res) => {
         user: req.user
     });
   });
-  
 
+// app.get('users/:id/verify/:token', confirmEmail, (req, res) => {
+//     res.json({
+//       message: "Email verified",
+//       token: req.params.token,
+//       id: req.params.id
+//     })
+//   })
   
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);

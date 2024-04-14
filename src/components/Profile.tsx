@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyledButton } from './AppMenuBar'; // Import your StyledButton component
 import axios from 'axios';
 
-import { useDispatch } from 'react-redux';
-import { logoutAction } from '../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppState, logoutAction } from '../store';
 import { toast } from 'react-toastify';
+import Login from './Login';
+import { useNavigate } from 'react-router';
 
 
 interface ProfileProps {
@@ -13,15 +15,18 @@ interface ProfileProps {
         username: string;
         email: string;
       };
+    handleToggle: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user }) => {
+const Profile: React.FC<ProfileProps> = ({ user, handleToggle }) => {
   const dispatch = useDispatch();
+  const [userAfterLogout, setUserAfterLogout] = useState(user);
+  const navigate = useNavigate()
 
   const handleLogout = async (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault()
     axios.post('http://localhost:5000/user/logout', {}, { withCredentials: true })
-        .then(() => {
+        .then((res) => {
             toast.success('Logged out succesfully!', {
                 position: "bottom-right",
                 autoClose: 3000,
@@ -32,20 +37,31 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
                 draggable: true,
                 theme: "light",
                 });
+
             dispatch(logoutAction())
-            setTimeout(() => {
-                window.location.reload();
-              }, 100);
+          
+            console.log("user after dispatch:", res.data.user)
+            setUserAfterLogout(res.data.user)
+            navigate('/')
+            
         })
         .catch(err => console.log(err.message));
   }
 
   return (
     <div>
-        <p>Hello, {user.username}</p>
+      { userAfterLogout ?  
+      <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column'}}>
+        <p>Hello, {user.username}!</p>
         <StyledButton onClick={handleLogout}>
             <span>Logout</span>
         </StyledButton>
+      </div>
+         :  
+         <p>Succesfully logged out!</p>
+        
+       }
+        
     </div>
   )
 }

@@ -3,10 +3,17 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const userSchema = mongoose.Schema({
-    username: {type: String, required: true, unique: true},
+    username: {
+      type: String, 
+      required: true, 
+      unique: true,
+      
+    },
     email: {type: String, required: true, unique: true},
     password: {type: String, required: true},
-    token: { type: String }
+    token: { type: String },
+    verified: { type: Boolean },
+    color: { type : String },
 },{ timestamps: true}
 );
 
@@ -41,7 +48,7 @@ userSchema.methods.generateAccessJWT = function () {
     id: this._id,
   };
   return jwt.sign(payload, process.env.SECRET_KEY, {
-    expiresIn: '20m',
+    expiresIn: '1h',
   })
 }
  

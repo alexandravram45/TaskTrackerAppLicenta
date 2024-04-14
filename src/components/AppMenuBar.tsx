@@ -1,5 +1,5 @@
 import { AppBar, Avatar, Box, Button, IconButton, Menu, Tooltip} from '@mui/material'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import styled from 'styled-components';
 import { ToastContainer } from 'react-toastify';
@@ -10,12 +10,12 @@ import Login from './Login';
 import { useSelector } from 'react-redux';
 import { AppState } from '../store';
 
-
 interface AppMenuBarProps {
   user: {
     id: string;
     username: string;
     email: string;
+    color: string;
   };
 }
 
@@ -70,8 +70,9 @@ const AppMenuBar: React.FC<AppMenuBarProps> = ({ user }) => {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [isChecked, setIsChecked] = useState<boolean>(false);
 
-  //const isLoggedIn = useSelector((state: AppState) => state.isLoggedIn);
+  const isLoggedIn = useSelector((state: AppState) => state.isLoggedIn);
   const isRegistered = useSelector((state: AppState) => state.isRegistered);
+  const currentUser = useSelector((state: AppState) => state.currentUser);
   //const isLoggedOut = useSelector((state: AppState) => state.isLoggedOut)
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -87,11 +88,12 @@ const AppMenuBar: React.FC<AppMenuBarProps> = ({ user }) => {
     console.log('isChecked:', isChecked);
   };
 
+
   return (
-    <AppBar position='static' sx={{backgroundColor: 'rgba(0, 0, 0, 0.034)', boxShadow: 'none'}}>
-      <div style={{display: 'flex', padding: 1, alignItems: 'center', justifyContent: 'space-between', marginLeft: '30px', marginRight: '30px'}}>
-        <div style={{ flexGrow: 3 }}>
-          <img src={require('../ticked.png')} width='20%' alt='ticked' />
+    <AppBar position='static' sx={{ position: 'absolute', backgroundColor: 'rgba(252, 252, 252, 0.17)', boxShadow: 'none', top: 0}}>
+      <div style={{display: 'flex', padding: 1, alignItems: 'center', justifyContent: 'space-between', marginRight: '30px'}}>
+        <div style={{ flexGrow: 1 }}>
+          <img src={require('../ticked.png')} width='170px' alt='ticked' />
         </div>
         <Button sx={{ textTransform: 'none', color: "#303030"}}>
           <NotificationsNoneIcon />
@@ -100,7 +102,7 @@ const AppMenuBar: React.FC<AppMenuBarProps> = ({ user }) => {
         <Box sx={{ ml: 1, textAlign: 'center'}}>
             <Tooltip title="Profile">
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="Remy Sharp" src="/static/images/avatar/2.jpg" />
+                <Avatar alt={user.username} src="/static/images/avatar/2.jpg" style={{backgroundColor: user.color}} />
               </IconButton>
             </Tooltip>
             <Menu
@@ -121,12 +123,12 @@ const AppMenuBar: React.FC<AppMenuBarProps> = ({ user }) => {
             >    
               
               <Box sx={{ width: '300px', height: '350px', padding: 5, alignItems: 'center', display: 'flex', justifyContent: 'center' }}>
-                { user.username !== "" ? (
-                  <Profile user={user} />
+                { user.id || currentUser !== null ? (
+                  <Profile user={currentUser || user} handleToggle={handleToggle} />
                 ) : isChecked ? (
                   <Register handleToggle={handleToggle} />
-                ) : (!isChecked || isRegistered) ? (
-                  <Login handleToggle={handleToggle} />
+                ) : (!isChecked || isRegistered || currentUser == null) ? (
+                  <Login handleToggle={handleToggle} boardId={""}/>
                 ): null}
               </Box>
             </Menu>

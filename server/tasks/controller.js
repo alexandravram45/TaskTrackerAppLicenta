@@ -3,11 +3,12 @@ const mongoose = require("mongoose")
 const taskModel = require('./task.model')
 
 exports.getAllTasks = async (req, res, next) => {
-    taskModel.find().then(
+  let columnId = req.params.id
+    taskModel.findOne({ columnId: columnId }).then(
         (results) => {
             res.send({
                 status: 200,
-                message: "All tasks from database",
+                message: "All tasks from database for column " + `${columnId}`,
                 data: results,
               });
         }, 
@@ -22,7 +23,7 @@ exports.getAllTasks = async (req, res, next) => {
 
 exports.getTaskById = async (req, res, next) => {
     let taskId = req.params.id;
-    taskModel.findById(taskId).then(
+    taskModel.findOne({ _id: taskId }).then(
         (result) => {
             if (result) {
               res.send({
@@ -49,13 +50,12 @@ exports.getTaskById = async (req, res, next) => {
 }
 
 exports.addTask = (req, res, next) => {
-    let body = req.body;
+    let title = req.body.title;
+    let columnId = req.body.columnId;
+
     const task = new taskModel({
-      title: body.title,
-      dueDate: body.dueDate,
-      description: body.description,
-      status: body.status,
-      board: body.board
+      title,
+      columnId
     });
   
     task.save().then(
@@ -101,6 +101,7 @@ exports.deleteTask = (req, res, next) => {
   
 exports.updateTask = (req, res, next) => {
     let taskId = req.params.id;
+    let body = req.body;
 
     taskModel
         .updateOne(
