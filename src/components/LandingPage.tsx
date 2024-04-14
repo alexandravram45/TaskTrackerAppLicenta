@@ -1,12 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
-  Button,
   TextField,
   Typography
 } from '@mui/material';
 import styled, { keyframes } from 'styled-components';
-import { StyledButton } from './AppMenuBar';
+import AppMenuBar, { StyledButton } from './AppMenuBar';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { loginAction } from '../store';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router';
+import LoadingCircle from './LoadingCircle'
+
+import { Formik, Form, Field, useFormik } from 'formik';
+import * as Yup from 'yup';
+
 
 const MainContainer = styled.div`
   display: flex;
@@ -112,11 +121,113 @@ const Svg = styled.svg`
 
 
 const LandingPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loading, setIsLoading] = useState(false);
+  const [error, setError] = useState("")
+
+
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  
+  const validationSchema = Yup.object().shape({
+    username: Yup.string()
+      .required('username is required'),
+      password: Yup.string()
+      .required('password is required'),
+  });
+  
+  let initialValues = {
+    username: "",
+    password: "",
+  };
+  
+  const formik = useFormik({
+    initialValues,
+    validationSchema,
+    onSubmit: (values) => {
+      handleLogin(values.username, values.password)
+    }
+  })
+
+
+  const handleLogin = async (username: String, password: String) => {
+    setIsLoading(true)
+  
+    try {
+      const response = await axios.post('http://localhost:5000/user/login', {
+        username: username,
+        password: password,
+      });
+  
+      console.log("res from login: ", response.data);
+      console.log(response.data.token);
+  
+      const token = response.data.token;
+  
+      
+      // Set the received token as a cookie
+      document.cookie = `SessionID=${token}; Max-Age=1200; Path=/; Secure; SameSite=None`;
+  
+      dispatch(loginAction(response.data.user))
+
+      toast.success('Logged in successfully!', {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        progress: undefined,
+        draggable: true,
+        theme: "light",
+      });
+
+      setTimeout(() => {
+        setIsLoading(false)
+        navigate('/boards')
+      }, 1500)
+
+      
+    } catch (error) {
+      console.log(error);
+    } 
+  };
+
+  const [user, setUser] = useState({
+    id: "",
+    username: "",
+    email: "",
+    color: "",
+  })
+
+  
+useEffect(() => {
+  const authToken = localStorage.getItem('authToken');
+  
+  if (authToken) {
+    axios.get("http://localhost:5000/profile", {
+      withCredentials: true,
+    })
+      .then((res) => {
+        console.log(res);
+        console.log(res.data.user.username);
+        setUser({
+          id: res.data.user._id,
+          username: res.data.user.username,
+          email: res.data.user.email,
+          color: res.data.user.color,
+        })
+        console.log(user)
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+}, [user.id]);
 
   return (
-    <>
+    <div>
+      <AppMenuBar user={user} />
+
       <MainContainer>
         <LeftBox>
           <Typography variant='h4' sx={{ color: '#f64f59' }}>Make your life easier</Typography>
@@ -150,35 +261,48 @@ const LandingPage = () => {
       <LoginContainer>
         <Typography variant='h5' sx={{ fontFamily: 'Poppins', color: 'white' }}>Login</Typography>
         <Typography sx={{ fontFamily: 'Poppins', color: 'white', fontWeight: '100' }}>Welcome back, please login</Typography>
-        <TextField id="email" label="email" variant="filled" value={email} onChange={(e) => setEmail(e.target.value)}
-          sx={{
-            '& input, & label': {
-              color: 'white',
-            },
-          }}
-        />
-        <TextField id="password" label="password" variant="filled" type='password' value={password} onChange={(e) => setPassword(e.target.value)}
-          sx={{
-            '& input, & label': {
-              color: 'white',
-            },
-          }}
-        />
-        <Button variant="contained"
-          sx={{
-            backgroundColor: '#f64f59',
-            '&:hover': {
-              backgroundColor: 'white',
-              color: '#f64f59'
-            },
-            fontWeight: 'bold',
-            fontFamily: 'Poppins',
-            padding: 2
-          }}>
-          Login
-        </Button>
+        <form
+          style={{ textAlign: 'center', display: 'flex', flexDirection: "column", alignItems: "center", gap: '20px'}}
+          onSubmit={formik.handleSubmit}
+        >
+          <TextField id="username" name='username' label="username" variant="filled" 
+            value={formik.values.username} 
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={error !== "" || formik.touched.username && Boolean(formik.errors.username)}
+            helperText={error || formik.touched.username && formik.errors.username}
+            sx={{
+              '& input, & label': {
+                color: 'white',
+              },
+              width: 230
+            }}
+
+          />
+          
+          <TextField id="password" label="password" name="password" variant="filled" type='password' 
+             value={formik.values.password} 
+             onChange={formik.handleChange}
+             onBlur={formik.handleBlur}
+             error={error !== "" || formik.touched.password && Boolean(formik.errors.password)}
+             helperText={error || formik.touched.password && formik.errors.password}
+            sx={{
+              '& input, & label': {
+                color: 'white',
+              },
+              width: 230
+            }}
+          />
+          { loading && <LoadingCircle /> }
+          <StyledButton type='submit'>
+            <span>
+            Login
+            </span>
+          </StyledButton>
+        </form>
+        
       </LoginContainer>
-    </>
+    </div>
   );
 };
 

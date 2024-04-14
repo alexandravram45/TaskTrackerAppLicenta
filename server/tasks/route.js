@@ -2,11 +2,11 @@ const express = require('express');
 const taskController = require('./controller');
 const router = express.Router();
 
-router.get('/', taskController.getAllTasks)
-
+router.get('/get-by-columnId/:id', taskController.getAllTasks)
+ 
 router.post('/', taskController.addTask)
 
-router.get('/:id', taskController.getTaskById)
+router.get('/get-by-id/:id', taskController.getTaskById)
 
 router.delete('/:id', taskController.deleteTask)
 

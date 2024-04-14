@@ -27,20 +27,21 @@ exports.authenticate = async (req, res, next) => {
     return res.status(401).json({ message: 'This session has expired. Please login' });
   }
 
-  try {
-    const decoded = jwt.verify(accessToken, process.env.SECRET_KEY);
+  jwt.verify(accessToken, process.env.SECRET_KEY, async (err, decoded) => {
+    if (err){
+      console.error('Invalid token: ', err);
+      return res.status(401).json({ message: 'This session has expired. Please login.' });
+    } else {
+      const { id } = decoded;
+      const user = await User.findById(id);
+  
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+  
+      req.user = user;
+      next();      
 
-    const { id } = decoded;
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
     }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Error verifying token:', error);
-    return res.status(401).json({ message: 'This session has expired. Please login.' });
-  }
+  });
 };
