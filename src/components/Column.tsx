@@ -1,7 +1,7 @@
 import React, { useState, useEffect, CSSProperties, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import Task from './Task';
-import { Button, ButtonGroup, Card, IconButton, Input, TextField, Typography } from '@mui/material';
+import { Box, Button, ButtonGroup, Card, IconButton, Input, Menu, TextField, Typography } from '@mui/material';
 import { Draggable, Droppable } from 'react-beautiful-dnd';
 import { COLORS } from '../colors';
 import AddIcon from '@mui/icons-material/Add';
@@ -15,6 +15,7 @@ import { AppState, setSelectedBoardRedux } from '../store';
 import EditIcon from '@mui/icons-material/Edit';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { User } from '../App';
+import Close from '@mui/icons-material/Close';
 
 interface TaskListProps {
   isdraggingover: boolean;
@@ -28,6 +29,7 @@ interface ColumnProps {
     index: number;
     draggingOverIndex: number;
     selectedBoard: Board | null;
+    members: User[];
   }
 
 
@@ -121,10 +123,12 @@ const Column: React.FC<ColumnProps> = (props) => {
   const dispatch = useDispatch();
   const selectedBoardRedux = useSelector((state: AppState) => state.selectedBoard);
   const [open, setOpen] = useState(false);
+  const [anchorColumn, setAnchorColumn] = useState<null | HTMLElement>(null);
+
 
 
   useEffect(() => {
-  }, [selectedBoardRedux?.tasks.length])
+  }, [props.tasks])
 
 
   const addNewCard = async (event: React.MouseEvent<HTMLElement>) => {
@@ -187,6 +191,13 @@ const Column: React.FC<ColumnProps> = (props) => {
     setOpen(false);
   };
 
+  const handleOpenColumnDetails = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorColumn(event.currentTarget);
+  };
+
+const handleCloseColumnDetails = () => {
+    setAnchorColumn(null);
+  };
 
   const addTask = async (event: React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -205,6 +216,7 @@ const Column: React.FC<ColumnProps> = (props) => {
           // setTasks(prevTasks => [...prevTasks, response.data.data]);
           console.log(props.tasks)
           props.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null})
+          props.selectedBoard?.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null})
 
           setCardTitle("");
           //setTasks((prev) => [...prev, response.data.data])
@@ -250,7 +262,37 @@ const Column: React.FC<ColumnProps> = (props) => {
           <Title {...provided.dragHandleProps}>
             {props.column.title}
           </Title>
-          <IconButton disableRipple><MoreHorizIcon /></IconButton>
+          <IconButton sx={{ width: '40px', height: '40px'}} onClick={handleOpenColumnDetails}><MoreHorizIcon /></IconButton>
+          <Menu
+            sx={{ ml: '12px'}}
+            anchorEl={anchorColumn}
+            anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+            }}
+            slotProps={{
+              paper: {
+                style: {borderRadius: '10px'}
+              },
+            }}            
+            keepMounted
+            transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+            }}
+            
+            open={Boolean(anchorColumn)}
+            onClose={handleCloseColumnDetails}
+          > 
+            <Box sx={{ width: '200px', height: '370px',  padding: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <IconButton onClick={handleCloseColumnDetails} style={{alignSelf: 'flex-end' , color: 'black'}}>
+                    <Close style={{ fontSize: '16px' }}/>
+                </IconButton>
+                <Typography style={{alignSelf: 'center'}} variant='body2'>{props.column.title}</Typography>
+                
+              
+            </Box>
+          </Menu>
         </div>
         <Droppable droppableId={props.column._id} type='task'>
           {(provided, snapshot) => (
@@ -261,7 +303,13 @@ const Column: React.FC<ColumnProps> = (props) => {
               draggingOverIndex={props.draggingOverIndex}
             >
               {props.tasks && props.tasks.map((task, index) => (
-                <Task key={`${task.title}-${index}`} task={task} index={index} selectedBoard={props.selectedBoard}/>
+                task &&
+                <Task 
+                  key={`${task.title}-${index}`} 
+                  task={task} 
+                  index={index} 
+                  selectedBoard={props.selectedBoard}
+                />
               ))}
               <TaskCard style={addNewCardStyle}>
                 <Input 

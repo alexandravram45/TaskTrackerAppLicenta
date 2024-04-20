@@ -9,7 +9,6 @@ const Board = require("../boards/board.model");
 const Task = require("../tasks/task.model")
 
 const Column = require("../columns/column.model");
-const Token = require("../token/token.model");
 
 const getUserById = async (req, res) => {
   const userId = req.params.id;
@@ -241,8 +240,8 @@ const sendConfirmationEmail = async (email, token, userId) => {
     port: 465,
     secure: true,
     auth: {
-      user: "a.avram54@gmail.com",
-      pass: "srycbjiifcigizvj",
+      user: "ticked.noreply@gmail.com",
+      pass: "dsguyzuhbpzoepcy"
     },
   });
   
@@ -319,8 +318,8 @@ const sendInvitationLink = async (req, res) => {
     port: 465,
     secure: true,
     auth: {
-      user: "a.avram54@gmail.com",
-      pass: "srycbjiifcigizvj",
+      user: "ticked.noreply@gmail.com",
+      pass: "dsguyzuhbpzoepcy",
     },
   });
   

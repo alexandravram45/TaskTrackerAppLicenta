@@ -11,6 +11,7 @@
   import AccountVerify from './components/AccountVerify';
   import InvitationPage from './components/InvitationPage';
   import Login from './components/Login';
+import CalendarView from './components/CalendarView';
 
   const root = ReactDOM.createRoot(
     document.getElementById('root')
@@ -25,6 +26,12 @@
         {
           path: ':boardId',
           element: <BoardComponents />,
+          children: [
+            {
+              path: 'calendarView',
+              element: <CalendarView />
+            }
+          ]
         }
       ]
     },
@@ -43,7 +50,8 @@
     {
       path: "/login",
       element: <Login />
-    }
+    },
+    
   ]);
 
   root.render(

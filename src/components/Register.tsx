@@ -69,7 +69,6 @@ const Register:React.FC<RegisterProps> = ({ handleToggle }) => {
         })
         .then(function (response) {
             console.log(response.data)
-            localStorage.setItem('authToken', response.data.token)
             toast.success('Register succesfully!', {
                 position: "bottom-right",
                 autoClose: 3000,

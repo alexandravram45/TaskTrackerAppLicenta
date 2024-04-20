@@ -41,8 +41,8 @@ const MobileMenuButton: React.FC<MobileMenuButtonProps> = ({ onOpen }) => {
   };
 
 const SideContainer = styled(Card)`
-    width: 12%; 
-    background-color: rgba(0, 0, 0, 0.034);
+    width: 240px; // Lățime fixă pentru container
+    min-width: 240px;    background-color: rgba(0, 0, 0, 0.034);
     flex: 1;
     float: left;
 `;
@@ -101,7 +101,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
 
     useEffect(() => {
         getAllBoards();
-    }, [user.id, location.pathname, selectedBoard?.name]); //mai era boards aici nuj dc
+    }, [user.id, location.pathname, selectedBoard?.name, boards?.length]); //mai era boards aici nuj dc
 
     const handleOpenNewBoard = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorBoard(event.currentTarget);
@@ -120,6 +120,20 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
       };
 
     const addNewBoard = async (title: String, color: String) => {
+        boards?.map((board) => {
+            if (board.name === title){
+              toast.error(`Board with name ${title} already exists!`, {
+                position: "bottom-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                progress: undefined,
+                draggable: true,
+                theme: "light",
+              });
+            }
+          })
         if (title === "") {
             toast.error('The board title should not be empty!', {
                 position: "bottom-right",
@@ -310,19 +324,19 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
             </>
         ) : (
             <SideContainer>
-            <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: 5, marginTop: '100px'}}>
+            <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: 5, marginTop: '150px',}}>
+                {/* <div style={{ borderRadius: '50%', marginLeft: '46px', width: '100px', height: '100px', backgroundColor: 'rgba(255, 255, 255, 0.281)', position: 'relative', padding: 4, margin: 4, textAlign: 'center'}}>
+                    <img src={require('../streak.png')} width='60px' alt='ticked' style={{  marginTop: '4px' }} />
+                    <Typography style={{ top: '66px', left: '48px', position: 'absolute'}} variant='h5'>2</Typography>
+
+                </div> */}
                 <StyledLink to={'/boards'} >
                     <ListButton id='button-wrapper' >
                         <HomeIcon />
                         <Typography ml='8px'>Boards</Typography>
                     </ListButton>
                 </StyledLink>
-                <StyledLink to={'/members'}>
-                    <ListButton id='button-wrapper'>
-                        <WorkspacePremiumIcon />
-                        <Typography ml='8px'>Members</Typography>
-                    </ListButton>
-                </StyledLink>
+                
                 <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
                     <Typography variant='body2' fontWeight='bold'>
                         Your boards
@@ -338,6 +352,11 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                 vertical: 'top',
                                 horizontal: 'right',
                             }}
+                            slotProps={{
+                                paper: {
+                                  style: {borderRadius: '10px'}
+                                },
+                              }}  
                             keepMounted
                             transformOrigin={{
                                 vertical: 'top',

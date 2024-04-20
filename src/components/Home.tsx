@@ -12,6 +12,7 @@ import AllBoards from './AllBoards';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppState, setSelectedBoardRedux } from '../store';
 import { User } from '../App';
+import { Scheduler } from '@aldabil/react-scheduler';
 
 
 export interface Board {
@@ -72,6 +73,10 @@ export const fetchTaskById = async (taskId: string) => {
   try {
     const response = await axios.get(`http://localhost:5000/tasks/get-by-id/${taskId}`);
     const newTask = response.data.data;
+      // if (!newTask) {
+      //   console.error('Task not found or is null.');
+      //   return null;
+      // }
     return newTask;
   } catch (error) {
 
@@ -169,10 +174,10 @@ const Home: React.FC<HomeProps> = ({ user }) => {
         });
       }
       else {
-        console.log(location.pathname)
-        console.log(selectedBoard)
-        console.log(boardDataFetched)
-        console.log(selectedBoardRedux)
+        // console.log(location.pathname)
+        // console.log(selectedBoard)
+        // console.log(boardDataFetched)
+        // console.log(selectedBoardRedux)
 
         if (selectedBoardRedux){
           fetchBoardById(selectedBoardRedux._id, user.id).then((res) =>{
@@ -209,7 +214,7 @@ const Home: React.FC<HomeProps> = ({ user }) => {
       }
     }
 
-    }, [selectedBoard?._id, user.id, boardDataFetched, location.pathname]);
+    }, [selectedBoard?._id, user.id, boardDataFetched, location.pathname, selectedBoardRedux]);
   
 
   
@@ -296,9 +301,7 @@ const Home: React.FC<HomeProps> = ({ user }) => {
     else {
 
       const draggedTask = selectedBoard?.tasks.find((task) => task._id === draggableId)
-      console.log(draggedTask)
-      console.log(selectedBoard)
-      console.log(selectedBoardRedux)
+
       if (!draggedTask) {
         console.error(`Task with id ${draggableId} not found in selected board`);
         return; // or handle the situation accordingly
@@ -415,6 +418,7 @@ const Home: React.FC<HomeProps> = ({ user }) => {
               <Routes>
                 <Route path="/" element={<AllBoards user={user}/>} />
                 <Route path=":boardId" element={<BoardComponents selectedBoard={selectedBoard} onDragEnd={onDragEnd} user={user}/>} />
+                <Route path=":boardId/calendarView" element={<Scheduler />} />
               </Routes>
             </div>
         </Container>
