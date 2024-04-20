@@ -68,7 +68,7 @@ const App: React.FC = () => {
   }, [user?.id]); 
 
   useEffect(() => {
-    console.log()
+    console.log(currentUser)
   })
 
   if (loading) {

@@ -5,7 +5,7 @@ import { Board } from './Home';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppState, setSelectedBoardRedux } from '../store';
+import { AppState, setBoards, setSelectedBoardRedux } from '../store';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import AddIcon from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
@@ -77,11 +77,12 @@ const BoardCard = styled(Card)`
 const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
   const [showAddNewBoardButton, setShowAddNewBoardButton] = useState(true);
   const [newBoardName, setNewBoardName] = useState('');
-  const [boards, setBoards] = useState<Board[]>([]);
+  const [boards, setBoardsHere] = useState<Board[]>([]);
   const [selectedColor, setSelectedColor] = useState("")
   const boardsRedux = useSelector((state: AppState) => state.boards); 
   const [sortBy, setSortBy] = useState<string>('');
   const [filterBy, setFilterBy] = useState<string>('');
+  const dispatch = useDispatch()
 
 
   const handleSortChange = (event: SelectChangeEvent<string>) => {
@@ -92,44 +93,37 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
     setFilterBy(event.target.value);
   };
 
-  const dispatch = useDispatch();
-
   const addNewBoard = async (title: String, color: String) => {
-    if (title === "") {
-        toast.error('The board title should not be empty!', {
-            position: "bottom-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            progress: undefined,
-            draggable: true,
-            theme: "light",
-          });
-    } else {
-        await axios.post('http://localhost:5000/board', {
-            user: user,
-            name: title,
-            columns: [],
-            color: color,
-        }).then((response) => {
-            toast.success(`Created board ${title}.`, {
-                position: "bottom-right",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                progress: undefined,
-                draggable: true,
-                theme: "light",
-              });
+      await axios.post('http://localhost:5000/board', {
+          user: user,
+          name: title,
+          columns: [],
+          color: color,
+      }).then((response) => {
+          toast.success(`Created board ${title}.`, {
+              position: "bottom-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              progress: undefined,
+              draggable: true,
+              theme: "light",
+            });
+        
+          console.log(response.data.data)
+          const newBoard: Board = response.data.data;
+          const updated = [...boards, newBoard]
+          dispatch(setBoards(updated))
+          getAllBoards(); // Fetch boards again to update the list
+          closeAddNewCard()
 
-            console.log(response.data)
-            getAllBoards(); // Fetch boards again to update the list
-        }).catch((err) => {
-            console.log(err)
-        })
-    } 
+          formik.resetForm();
+
+      }).catch((err) => {
+          console.log(err)
+      })
+
 }
 
   const validationSchema = Yup.object().shape({
@@ -145,9 +139,36 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
     initialValues,
     validationSchema,
     onSubmit: (values) => {
-        addNewBoard(values.title, selectedColor)
-        console.log(selectedColor)
-    }
+      if (values.title.trim() === "") {
+          toast.error('The board title should not be empty!', {
+              position: "bottom-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              progress: undefined,
+              draggable: true,
+              theme: "light",
+          });
+      } else {
+          const existingBoard = boards.find(board => board.name === values.title);
+          if (existingBoard) {
+              toast.error(`Board with name "${values.title}" already exists!`, {
+                  position: "bottom-right",
+                  autoClose: 3000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  progress: undefined,
+                  draggable: true,
+                  theme: "light",
+              });
+          } else {
+              addNewBoard(values.title, selectedColor);
+          }
+      }
+  }
+  
   })
 
 
@@ -159,6 +180,7 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
     try {
       const response = await axios.get(`http://localhost:5000/board?userId=${user.id}`);
       let sortedBoards = response.data;
+      console.log(sortedBoards)
 
       // Sortare în funcție de criteriul selectat
       if (sortBy === 'createdAt') {
@@ -167,8 +189,8 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
         });
       } else if (sortBy === 'title') {
         sortedBoards = response.data.sort((a: any, b: any) => {
-          if (a.title && b.title) {
-            return a.title.localeCompare(b.title);
+          if (a.name && b.name) {
+            return a.name.localeCompare(b.name);
           } else {
             return 0;
           }
@@ -180,9 +202,7 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
           return a.favorite === true;
         })
       }
-      console.log(sortedBoards)
-
-      setBoards(sortedBoards);
+      setBoardsHere(sortedBoards);
       // dispatch(setBoards(sortedBoards))
 
     } catch (error) {
@@ -275,8 +295,8 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
                   value={formik.values.title} 
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.title && Boolean(formik.errors.title)}
-                  helperText={formik.touched.title && formik.errors.title}
+                  error={formik.touched.title && Boolean(formik.errors.title || boards.find(board => board.name === formik.values.title))}
+                  helperText={(formik.touched.title && formik.errors.title) || (formik.touched.title && boards.find(board => board.name === formik.values.title) ? `Board with name "${formik.values.title}" already exists` : '')}               
               />
               <Typography variant='body2'>Choose background</Typography>
               <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap',}}>

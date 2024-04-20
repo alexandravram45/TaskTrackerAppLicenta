@@ -8,7 +8,7 @@ router.post('/', taskController.addTask)
 
 router.get('/get-by-id/:id', taskController.getTaskById)
 
-router.delete('/:id', taskController.deleteTask)
+router.delete('/:id/:boardId', taskController.deleteTask)
 
 router.put('/:id', taskController.updateTask)
 

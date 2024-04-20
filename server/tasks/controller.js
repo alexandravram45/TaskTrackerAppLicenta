@@ -1,6 +1,7 @@
 const mongoose = require("mongoose")
 
 const taskModel = require('./task.model')
+const { updateBoardAfterTaskDeletion } = require("../boards/controller")
 
 exports.getAllTasks = async (req, res, next) => {
   let columnId = req.params.id
@@ -81,13 +82,24 @@ exports.deleteTask = (req, res, next) => {
     // va lua id-ul ticketului din request
     let taskId = req.params.id;
 
-    taskModel.deleteOne({ _id: taskId }).then(
-        () => {
-        res.send({
-            status: 200,
-            message: "Deleted task with success!",
-            data: null,
-        });
+    taskModel.findOneAndDelete({ _id: taskId }).then(
+        async (result) => {
+          try {
+            const boardId = req.params.boardId; // Presupunând că ai acces la ID-ul bordului asociat taskului
+            await updateBoardAfterTaskDeletion(boardId, taskId);
+            res.send({
+                status: 200,
+                message: "Deleted task with success!",
+                data: result,
+            });
+          } catch (err) {
+            console.error(err);
+            res.status(500).json({
+                status: 500,
+                message: "Something went wrong while updating the board!",
+                error: err.message,
+            });
+          }
         },
         (error) => {
         res.send({
@@ -113,7 +125,9 @@ exports.updateTask = (req, res, next) => {
             dueDate: body.dueDate,
             description: body.description,
             status: body.status,
-            board: body.board
+            board: body.board,
+            assignee: body.assignee,
+            points: body.points,
             },
         }
         )

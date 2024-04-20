@@ -9,7 +9,7 @@ exports.createBoard = (req, res, next) => {
   let columns = req.body.columns;
   let color = req.body.color;
 
-  let createdAt = new Date();
+  let createdAt = Date.now();
   let favorite = false;
   let members = [];
 
@@ -190,7 +190,7 @@ exports.addMemberToBoard = async (req, res) => {
     }
 
     if (board.members.includes(userId)) {
-      return res.status(400).json({ message: 'User is already a member of the board' });
+      return res.status(200).json({ message: 'User is already a member of the board' });
     }
 
     if (userId === board.user.toString()) {
@@ -213,3 +213,52 @@ exports.addMemberToBoard = async (req, res) => {
     });
   }
 }
+
+
+const columnModel = require('../columns/column.model');
+
+exports.updateBoardAfterTaskDeletion = async (boardId, deletedTaskId) => {
+    try {
+      console.log(typeof deletedTaskId)
+        // Găsește bordul după ID
+        const board = await boardModel.findById(boardId);
+        
+        if (!board) {
+            throw new Error('Board not found');
+        }
+        
+        // Elimină taskul șters din array-ul de taskuri al bordului
+        board.tasks = board.tasks.filter(task => {
+          const taskString = task.toString();
+          const deletedTaskString = deletedTaskId.toString();
+          console.log(`Comparing task ${taskString} with deleted task ${deletedTaskString}`);
+          return taskString !== deletedTaskString;
+        });        
+        // Actualizează fiecare coloană asociată pentru a elimina taskul șters din array-ul de taskuri al coloanelor
+        const columnUpdatePromises = board.columns.map(async columnId => {
+            const column = await columnModel.findById(columnId);
+            if (column) {
+              column.tasks = column.tasks.filter(task => {
+                const taskString = task.toString();
+                const deletedTaskString = deletedTaskId.toString();
+                console.log(`Comparing task ${taskString} with deleted task ${deletedTaskString}`);
+                return taskString !== deletedTaskString;
+            });
+            console.log(board.columns.tasks)
+            
+            await column.save();
+            }
+        });
+        
+        await Promise.all(columnUpdatePromises);
+        
+        // Salvează bordul actualizat în baza de date
+        await board.save();
+        
+        
+        console.log(`Board ${boardId} updated after task deletion`);
+    } catch (error) {
+        console.error('Error updating board after task deletion:', error);
+        throw error; // Aruncă eroarea pentru a fi gestionată în funcția care apelează această metodă
+    }
+};

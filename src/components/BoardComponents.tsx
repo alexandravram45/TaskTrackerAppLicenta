@@ -19,8 +19,10 @@
   import SendIcon from '@mui/icons-material/Send';
   import StarIcon from '@mui/icons-material/Star';
   import { User } from '../App';
+  import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
   import { useFormik } from 'formik';
+import { Link } from 'react-router-dom';
 
   interface BoardComponentsProps {
       selectedBoard: Board | null,
@@ -135,7 +137,7 @@
     const [isModified, setIsModified] = useState(false);
     const [newMemberEmail, setNewMemberEmail] = useState('');
     const [favorite, setFavorite] = useState(selectedBoard?.favorite);
-    const [members, setMembers] = useState<User[]>()
+    const [members, setMembers] = useState<User[]>([])
     const [isEditing, setIsEditing] = useState(false);
     const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
     const dispatch = useDispatch();
@@ -153,7 +155,6 @@
 
 
     useEffect(() => {
-      // setMembers([])
       setBoardName(selectedBoard?.name || "");
 
       setLoading(true);
@@ -161,7 +162,7 @@
       // Amână afișarea membrilor și a utilizatorului de bord cu 500ms
       const timeout = setTimeout(() => {
         getMembers().then(() => setLoading(false));
-      }, 300);
+      }, 500);
     
       // Curăță timeout-ul dacă componenta este demontată înainte de expirarea celor 500ms
       
@@ -173,9 +174,10 @@
       // console.log(selectedBoard?.user)
       console.log(selectedBoard?.members)
       console.log(boardUser)
+      console.log(members)
       return () => clearTimeout(timeout);
 
-    }, [selectedBoard]); // Efectul se declanșează ori de câte ori se schimbă selectedBoard
+    }, [selectedBoard?._id]); // Efectul se declanșează ori de câte ori se schimbă selectedBoard
     
 
     const handleDoubleClick = () => {
@@ -198,9 +200,6 @@
           console.log(res.data)
           dispatch(setSelectedBoardRedux(res.data.data))
           setBoardName(res.data.data.name);
-          // console.log(boardName)
-          // console.log(selectedBoard?.name)
-          // console.log(selectedBoardRedux?.name)
         }).catch((err) => {
           console.log(err)
         })  
@@ -295,6 +294,7 @@
 
     const getMembers = async () => {
       console.log(selectedBoard?.members)
+      console.log(members)
       if (selectedBoard) {
         for (const userId of selectedBoard.members || []) {
           try {
@@ -307,7 +307,7 @@
             };
     
             // Verifică dacă membrul este deja în listă
-            if (!members?.some(member => member.id === userData.id) && userData.id !== selectedBoard.user) {
+            if (! (members?.some(member => member.id === userData.id) || userData.id === selectedBoard.user)) {
               setMembers((prevMembers) => [...(prevMembers || []), userData]);
             }
             console.log(members)
@@ -446,11 +446,17 @@
               }
 
             <div style={{marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10}}>
+              <Link to={`calendarView`}>
+                <IconButton>
+                  <CalendarMonthIcon sx={{ color: 'white'}} />
+                </IconButton>
+              </Link>
+
 
               <Button onClick={handleOpen} style={{ backgroundColor: 'white', color: 'black' }}>
                 <ShareIcon style={{marginRight: 4}} />Share
               </Button>
-
+              
 
               <Dialog open={open} fullWidth onClose={handleClose} PaperProps={{ sx: { backgroundColor: '#ebecf0', padding: 2 }}}>
               <form onSubmit={formik.handleSubmit}>
@@ -501,7 +507,15 @@
                           ref={provided.innerRef}
                         >
                             {selectedBoard  ?.columns?.map((column, index) => {
-                                return <Column key={column._id} column={column} tasks={column.tasks} index={index} draggingOverIndex={draggingOverIndex} selectedBoard={selectedBoard}/>;
+                                return <Column 
+                                          key={column._id} 
+                                          column={column} 
+                                          tasks={column.tasks} 
+                                          index={index} 
+                                          draggingOverIndex={draggingOverIndex} 
+                                          selectedBoard={selectedBoard}
+                                          members={members}
+                                        />;
                             })}
                             <ColumnCard style={addNewColumnStyle}>
                             <GlobalScrollbarStyle />

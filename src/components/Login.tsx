@@ -12,7 +12,7 @@ import * as Yup from 'yup';
 import { useDispatch } from 'react-redux';
 import { loginAction, setCurrentUser } from '../store';
 import { json } from 'stream/consumers';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 
 
 interface LoginProps {
@@ -36,6 +36,7 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
+  const params = useParams()
 
   const handleLogin = async (username: String, password: String) => {
       await axios.post('http://localhost:5000/user/login', {
@@ -44,6 +45,7 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId }) => {
       })
       .then((response) => {
         const token = response.data.token;
+        localStorage.setItem('authToken', token)
   
         // Set the received token as a cookie
         document.cookie = `SessionID=${token}; Max-Age=1200; Path=/; Secure; SameSite=None`;
@@ -62,10 +64,19 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId }) => {
         setError('');
         formik.resetForm();
   
-        dispatch(setCurrentUser(response.data.user))
+        dispatch(setCurrentUser(response.data.user))  
         dispatch(loginAction(response.data.user))
 
+        const userId = response.data.user.id;
+
         if (location.pathname.includes('join')){
+          axios.get(`http://localhost:5000/board/${params.boardId}/join/${userId}`)
+          .then((res) => {
+              console.log(res)
+          })
+          .catch((err) => {
+              console.log(err)
+          })
           navigate(`/boards/${boardId}`)
         } else {
           navigate("/boards")
@@ -140,9 +151,11 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId }) => {
         <StyledButton type='submit'>
             <span>Log in</span>
         </StyledButton>
+        { location.pathname.includes('join') ? null :
         <Link component="button" onClick={handleToggle} style={{color: '#5B42F3'}} underline="hover">
             Don't have an account?
         </Link>
+        }
       </form>
 
     </LoginContainer>
