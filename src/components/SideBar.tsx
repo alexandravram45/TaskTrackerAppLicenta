@@ -1,4 +1,4 @@
-import { Box, Button, ButtonGroup, Card, Container, Drawer, IconButton, Input, List, Menu, TextField, Typography, lighten, styled, useMediaQuery } from '@mui/material'
+import { Box, Button, Card, Drawer, IconButton, Menu, TextField, Typography, styled, useMediaQuery } from '@mui/material'
 import HomeIcon from '@mui/icons-material/Home';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import './styles.css'
@@ -16,13 +16,12 @@ import { AppState, setBoards, setSelectedBoardRedux } from '../store';
 import { Board } from './Home';
 import MenuIcon from '@mui/icons-material/Menu';
 import { backgroundColors } from '../colors';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { User } from '../App';
+import Star from '@mui/icons-material/Star';
 
 interface SideBarProps {
-    user: {
-      id: string;
-      username: string;
-      email: string;
-    };
+    user: User;
     onBoardSelect: (board: Board) => void;
 }
 
@@ -42,9 +41,12 @@ const MobileMenuButton: React.FC<MobileMenuButtonProps> = ({ onOpen }) => {
 
 const SideContainer = styled(Card)`
     width: 240px; // Lățime fixă pentru container
-    min-width: 240px;    background-color: rgba(0, 0, 0, 0.034);
+    min-width: 240px;    
+    background-color: rgb(255 255 255 / 16%);
     flex: 1;
     float: left;
+    margin-top: 61px;
+    border-right: 0.5px solid #ffffff73;
 `;
 
 const ListButton = styled(Button)`
@@ -66,9 +68,9 @@ const StyledLink = styled(Link)`
 `;
 
 export const CreateButton = styled(Button)`
-    color: #172b4d;
+    /* color: #000000; */
     width: 100%;
-    background-color: #091e420f;
+    /* background-color: #091e420f; */
     text-decoration: none;
 
     &:hover {
@@ -101,7 +103,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
 
     useEffect(() => {
         getAllBoards();
-    }, [user.id, location.pathname, selectedBoard?.name, boards?.length]); //mai era boards aici nuj dc
+    }, [user.id, location.pathname, selectedBoard?.name, boards?.length, selectedBoard?.favorite]); //mai era boards aici nuj dc
 
     const handleOpenNewBoard = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorBoard(event.currentTarget);
@@ -120,32 +122,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
       };
 
     const addNewBoard = async (title: String, color: String) => {
-        boards?.map((board) => {
-            if (board.name === title){
-              toast.error(`Board with name ${title} already exists!`, {
-                position: "bottom-right",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                progress: undefined,
-                draggable: true,
-                theme: "light",
-              });
-            }
-          })
-        if (title === "") {
-            toast.error('The board title should not be empty!', {
-                position: "bottom-right",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                progress: undefined,
-                draggable: true,
-                theme: "light",
-              });
-        } else {
+        
             await axios.post('http://localhost:5000/board', {
                 user: user,
                 name: title,
@@ -168,7 +145,6 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
             }).catch((err) => {
                 console.log(err)
             })
-        } 
     }
     
     const getAllBoards = async () => {
@@ -197,6 +173,10 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
     const validationSchema = Yup.object().shape({
         title: Yup.string()
           .required('title is required')
+          .test('unique-title', 'Board with this name already exists', function(value) {
+            const boardExists = boards?.some(board => board.name === value);
+            return !boardExists;
+        })
       });
       
       let initialValues = {
@@ -206,10 +186,13 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
       const formik = useFormik({
         initialValues,
         validationSchema,
-        onSubmit: (values) => {
+        onSubmit: (values, { setFieldError }) => {
             addNewBoard(values.title, selectedColor)
-            console.log(selectedColor)
-            
+                .catch(error => {
+                    if (error.response && error.response.data && error.response.data.message) {
+                        setFieldError('title', error.response.data.message);
+                    }
+                });
         }
       })
 
@@ -233,12 +216,13 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                 <Typography ml='8px'>Boards</Typography>
                             </ListButton>
                         </StyledLink>
-                        <StyledLink to={'/members'}>
-                            <ListButton id='button-wrapper'>
-                                <WorkspacePremiumIcon />
-                                <Typography ml='8px'>Members</Typography>
+                        <StyledLink to={'/boards/progress'} >
+                            <ListButton id='button-wrapper' >
+                                <AutoAwesomeIcon />
+                                <Typography ml='8px'>Your progress</Typography>
                             </ListButton>
                         </StyledLink>
+                       
                         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
                             <Typography variant='body2' fontWeight='bold'>
                                 Your boards
@@ -262,7 +246,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                     open={Boolean(anchorBoard)}
                                     onClose={handleCloseNewBoard}
                                 >    
-                                    <Box sx={{ width: '266px', height: '370px', padding: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box sx={{ width: '266px', height: 'auto', padding: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         <Button onClick={handleCloseNewBoard} style={{alignSelf: 'flex-end' , color: 'black', marginRight: '-10px', marginTop: '-10px'}}>
                                             <Close style={{ fontSize: '16px' }}/>
                                         </Button>
@@ -324,18 +308,25 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
             </>
         ) : (
             <SideContainer>
-            <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: 5, marginTop: '150px',}}>
+            <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: 5, marginTop: '70px',}}>
                 {/* <div style={{ borderRadius: '50%', marginLeft: '46px', width: '100px', height: '100px', backgroundColor: 'rgba(255, 255, 255, 0.281)', position: 'relative', padding: 4, margin: 4, textAlign: 'center'}}>
                     <img src={require('../streak.png')} width='60px' alt='ticked' style={{  marginTop: '4px' }} />
                     <Typography style={{ top: '66px', left: '48px', position: 'absolute'}} variant='h5'>2</Typography>
 
                 </div> */}
-                <StyledLink to={'/boards'} >
+                <StyledLink to={'boards'} >
                     <ListButton id='button-wrapper' >
                         <HomeIcon />
                         <Typography ml='8px'>Boards</Typography>
                     </ListButton>
                 </StyledLink>
+                <StyledLink to={'progress'} >
+                    <ListButton id='button-wrapper' >
+                        <AutoAwesomeIcon />
+                        <Typography ml='8px'>Your progress</Typography>
+                    </ListButton>
+                </StyledLink>
+                
                 
                 <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
                     <Typography variant='body2' fontWeight='bold'>
@@ -346,7 +337,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                             <AddIcon  style={{ fontSize: '16px'}}/> 
                         </ListButton>
                         <Menu
-                            sx={{ ml: '26px' }}
+                            sx={{ ml: '20px' }}
                             anchorEl={anchorBoard}
                             anchorOrigin={{
                                 vertical: 'top',
@@ -365,7 +356,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                             open={Boolean(anchorBoard)}
                             onClose={handleCloseNewBoard}
                         >    
-                            <Box sx={{ width: '266px', height: '370px', padding: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ width: '300px', height: 'auto', padding: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Button onClick={handleCloseNewBoard} style={{alignSelf: 'flex-end' , color: 'black', marginRight: '-10px', marginTop: '-10px'}}>
                                     <Close style={{ fontSize: '16px' }}/>
                                 </Button>
@@ -417,6 +408,12 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                 <Typography>
                                         {board.name}
                                 </Typography>
+                                {
+                                    board.favorite === true 
+                                    ? <Star style={{ marginLeft: 'auto', color: 'rgba(17, 17, 17, 0.503)'}}/>
+                                    : null
+                                }
+                                
                             </ListButton>
                         </StyledLink>
     

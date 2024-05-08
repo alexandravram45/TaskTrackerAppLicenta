@@ -1,27 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { StyledButton } from './AppMenuBar'; // Import your StyledButton component
 import axios from 'axios';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { AppState, logoutAction } from '../store';
+import { AppState, logoutAction, setCurrentUser } from '../store';
 import { toast } from 'react-toastify';
-import Login from './Login';
 import { useNavigate } from 'react-router';
+import { Typography } from '@mui/material';
 
 
 interface ProfileProps {
-    user: {
-        id: string;
-        username: string;
-        email: string;
-      };
     handleToggle: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, handleToggle }) => {
+const Profile: React.FC<ProfileProps> = ( handleToggle ) => {
   const dispatch = useDispatch();
-  const [userAfterLogout, setUserAfterLogout] = useState(user);
   const navigate = useNavigate()
+  const user = useSelector((state: AppState) => state.currentUser);
+  const [userAfterLogout, setUserAfterLogout] = useState(user);
 
   const handleLogout = async (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault()
@@ -42,7 +38,10 @@ const Profile: React.FC<ProfileProps> = ({ user, handleToggle }) => {
           
             console.log("user after dispatch:", res.data.user)
             setUserAfterLogout(res.data.user)
+            dispatch(setCurrentUser(null))
             navigate('/')
+            window.location.reload()
+
             
         })
         .catch(err => console.log(err.message));
@@ -51,8 +50,11 @@ const Profile: React.FC<ProfileProps> = ({ user, handleToggle }) => {
   return (
     <div>
       { userAfterLogout ?  
-      <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column'}}>
-        <p>Hello, {user.username}!</p>
+      <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 6}}>
+        <Typography variant='h5'>Hello, {user?.firstName}!</Typography>
+        <Typography variant='subtitle2'>Current title</Typography>
+        <img src={require('../novice.png')} width='60px' alt='novice' />
+        <Typography  variant='h5'>Novice</Typography>
         <StyledButton onClick={handleLogout}>
             <span>Logout</span>
         </StyledButton>

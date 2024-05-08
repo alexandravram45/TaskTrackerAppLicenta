@@ -1,4 +1,4 @@
-import { Card, CircularProgress, Typography } from '@mui/material';
+import { Box, Card, CircularProgress, Typography } from '@mui/material';
 import axios from 'axios'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
@@ -11,6 +11,7 @@ import Login from './Login';
 import Register from './Register';
 import { Toast, ToastContainer } from 'react-toastify/dist/components';
 import { User } from '../App';
+import ForgotPassword from './ForgotPassword';
 
 const styles: { [key: string]: CSSProperties } = {
     container: {
@@ -45,11 +46,20 @@ const InvitationPage = () => {
     const navigate = useNavigate(); // Obține istoricul navigării
     const [user, setUser] = useState<User | null>(null);
     const [isChecked, setIsChecked] = useState<boolean>(false);
+    const [isCheckedReset, setIsCheckedReset] = useState<boolean>(false);
+    
 
     const handleToggle = () => {
         setIsChecked((prev) => !prev);
-    };
-
+        console.log('isChecked:', isChecked);
+      };
+    
+      const handleToggleReset = () => {
+        setIsCheckedReset((prev) => !prev);
+    
+        console.log('isCheckedreset:', isCheckedReset);
+    
+      };
 
     
   useEffect(() => {
@@ -67,6 +77,8 @@ const InvitationPage = () => {
         const userData = {
           id: res.data.user._id,
           username: res.data.user.username,
+          firstName: res.data.user.firstName,
+          lastName: res.data.user.lastName,
           email: res.data.user.email,
           color: res.data.user.color,
         };
@@ -124,11 +136,17 @@ const InvitationPage = () => {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 30, alignItems: 'center'}}>
                     <img src={require('../ticked.png')} width='350px' alt='ticked'/>
-                    <Card style={{ backgroundColor: 'rgba(0, 0, 0, 0.032)', padding: '60px', height: '350px'}}>
-                        { isChecked 
-                        ? <Register handleToggle={handleToggle} />
-                        : <Login handleToggle={handleToggle} boardId={params.boardId || ""}/>
-                        }
+                    <Card style={{ backgroundColor: 'rgba(0, 0, 0, 0.032)', padding: '60px', height: 'auto', width: '300px'}}>
+                        {/* <Login handleToggle={function () {}} handleToggleReset={function () {}} boardId={params.boardId || ""}/> */}
+                        <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center' }}>
+                            { isChecked ? (
+                            <Register handleToggle={handleToggle} />
+                            ) : (isCheckedReset) ? (
+                            <ForgotPassword handleToggleReset={handleToggleReset} />
+                            ): (!isChecked && !isCheckedReset ) ? (
+                            <Login handleToggle={handleToggle} handleToggleReset={handleToggleReset} boardId={""}/>
+                            ) : null}
+                        </Box>
                     </Card>
                 </div>
             )}

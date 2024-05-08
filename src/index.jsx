@@ -12,6 +12,9 @@
   import InvitationPage from './components/InvitationPage';
   import Login from './components/Login';
 import CalendarView from './components/CalendarView';
+import Points from './components/Points';
+import AllBoards from './components/AllBoards';
+import ResetPassword from './components/ResetPassword';
 
   const root = ReactDOM.createRoot(
     document.getElementById('root')
@@ -20,25 +23,33 @@ import CalendarView from './components/CalendarView';
 
   const router = createBrowserRouter([
     {
-      path: '/boards',
+      path: '/',
       element: <App />,
       children: [
         {
-          path: ':boardId',
+          path: 'boards',
+          element: <AllBoards />,
+        },
+        {
+          path: 'boards/:boardId',
           element: <BoardComponents />,
-          children: [
-            {
-              path: 'calendarView',
-              element: <CalendarView />
-            }
-          ]
+        },
+        {
+        path: 'boards/:boardId/calendarView',
+        element: <CalendarView />
+        },
+        {
+          path: '/progress',
+          element: <Points />
+        },
+        {
+          path: "/landing",
+          element: <LandingPage />,
         }
+
       ]
     },
-    {
-      path: "/",
-      element: <LandingPage />,
-    },
+  
     {
       path: "user/:id/verify/:token",
       element: <AccountVerify />
@@ -51,6 +62,11 @@ import CalendarView from './components/CalendarView';
       path: "/login",
       element: <Login />
     },
+    {
+      path: "/resetPassword/:token",
+      element: <ResetPassword />,
+    },
+    
     
   ]);
 

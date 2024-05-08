@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { CSSProperties } from 'styled-components';
 
-const styles: { [key: string]: CSSProperties } = {
+export const styles: { [key: string]: CSSProperties } = {
     container: {
         display: 'flex',
         justifyContent: 'center',

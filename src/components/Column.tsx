@@ -1,21 +1,23 @@
-import React, { useState, useEffect, CSSProperties, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Task from './Task';
-import { Box, Button, ButtonGroup, Card, IconButton, Input, Menu, TextField, Typography } from '@mui/material';
+import { Box, Button, ButtonGroup, Card, Divider, IconButton, Input, Menu, Typography } from '@mui/material';
 import { Draggable, Droppable } from 'react-beautiful-dnd';
-import { COLORS } from '../colors';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Board, fetchBoardById } from './Home';
+import { Board } from './Home';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppState, setSelectedBoardRedux } from '../store';
-import EditIcon from '@mui/icons-material/Edit';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { User } from '../App';
 import Close from '@mui/icons-material/Close';
+import { TaskInterface } from './Home';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
+
 
 interface TaskListProps {
   isdraggingover: boolean;
@@ -25,11 +27,12 @@ interface TaskListProps {
 
 interface ColumnProps {
     column: { _id: string; title: String; };
-    tasks: Array<{ title: string, _id: string, description: string, dueDate: Date | null, points: number | null, assignee: User | null }>;
+    tasks: Array<TaskInterface>;
     index: number;
     draggingOverIndex: number;
     selectedBoard: Board | null;
     members: User[];
+    done: Boolean;
   }
 
 
@@ -44,9 +47,9 @@ const ColumnCard = styled(Card)`
   transition-duration: 0.3s;
   position: relative;
   float: left;
-  background-color: #ebecf0 !important;
+  background-color: #ebecf0 ;
   color: #172b4d !important;
-
+  background-color: ${props => props.theme.palette === 'dark' ? 'black' : '#ebecf0'}; // Setează culoarea textului în funcție de tema selectată
 `;
 
 const AddNewCardButton = styled(Button)`
@@ -102,6 +105,26 @@ const TaskList = styled.div<TaskListProps>`
    */
 `;
 
+const ListItem = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const DueDateButton = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: none;
+  font-family: 'Poppins';
+  background-color: transparent;
+  cursor: pointer;
+  color: ${props => props.theme.palette === 'dark' ? 'white' : 'inherit'}; // Setează culoarea textului în funcție de tema selectată
+  
+  &:hover {
+    background-color: rgba(126, 40, 255, 0.122);
+  }
+`;
+
 
 
 const TaskCard = styled(Card)`
@@ -123,12 +146,11 @@ const Column: React.FC<ColumnProps> = (props) => {
   const dispatch = useDispatch();
   const selectedBoardRedux = useSelector((state: AppState) => state.selectedBoard);
   const [open, setOpen] = useState(false);
+  const [areYouSureButton, setAreYouSureButton] = useState(false);
   const [anchorColumn, setAnchorColumn] = useState<null | HTMLElement>(null);
-
-
-
-  useEffect(() => {
-  }, [props.tasks])
+  const [tasks, setTasks] = useState<TaskInterface[]>([])
+  const [column, setColumn] = useState(props.column)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
 
   const addNewCard = async (event: React.MouseEvent<HTMLElement>) => {
@@ -144,9 +166,19 @@ const Column: React.FC<ColumnProps> = (props) => {
       console.log("Error fetching task: ", err)
     }
   }
-  
 
-  const updateColumn = async (columnId: string, taskIds: string) => {
+  const updateDoneFieldColumn = async (columnId: string, done: Boolean) => {
+    await axios.put(`http://localhost:5000/column/${columnId}`, {
+      done
+    }).then((res) => {
+      console.log(res.data)
+      getColumn()
+    }).catch((err) => {
+      console.log(err)
+    })  
+  }
+
+  const updateColumn = async (columnId: string, taskIds: string | Array<TaskInterface>) => {
     await axios.put(`http://localhost:5000/column/${columnId}`, {
       taskIds
     }).then((res) => {
@@ -154,7 +186,6 @@ const Column: React.FC<ColumnProps> = (props) => {
       let updatedTasks = res.data.data.tasks;
       console.log(updatedTasks)
       fetchTaskById(updatedTasks[updatedTasks.length - 1])
-
     }).catch((err) => {
       console.log(err)
     })  
@@ -181,6 +212,10 @@ const Column: React.FC<ColumnProps> = (props) => {
       }).catch((err) => {
       console.log(err)
     })  
+  }
+
+  const handleAreYouSureButton = () => {
+    setAreYouSureButton(true)
   }
 
   const handleOpen = () => {
@@ -215,8 +250,8 @@ const handleCloseColumnDetails = () => {
           ]) 
           // setTasks(prevTasks => [...prevTasks, response.data.data]);
           console.log(props.tasks)
-          props.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null})
-          props.selectedBoard?.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null})
+          props.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null, done: null})
+          props.selectedBoard?.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null, done: null})
 
           setCardTitle("");
           //setTasks((prev) => [...prev, response.data.data])
@@ -248,6 +283,117 @@ const handleCloseColumnDetails = () => {
     setAddButtonStyle({ display: 'flex' })
   }
 
+  const sortByDueDate = () => {
+    props.tasks.sort((a, b) => {
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      return 0;
+    });
+    // Actualizează state-ul pentru a reflecta noua ordine a taskurilor
+    setTasks([...props.tasks]);
+    updateColumn(props.column._id, tasks)
+
+  };
+
+  const sortByTitle= () => {
+    props.tasks.sort((a, b) => {
+      const titleA = a.title.toLowerCase();
+      const titleB = b.title.toLowerCase();
+      if (titleA < titleB) {
+        return -1;
+      }
+      if (titleA > titleB) {
+        return 1;
+      }
+      return 0;
+    });
+    // Actualizează state-ul pentru a reflecta noua ordine a taskurilor
+    setTasks([...props.tasks]);
+    updateColumn(props.column._id, tasks)
+  };
+  
+
+  const sortByStoryPoints = () => {
+    props.tasks.sort((a, b) => {
+      // Verificăm dacă taskurile au story points asignate
+      if (a.points === null && b.points === null) {
+        return 0;
+      }
+      // Taskurile fără puncte de poveste sunt plasate la sfârșit
+      if (a.points === null) {
+        return 1;
+      }
+      if (b.points === null) {
+        return -1;
+      }
+      // Comparăm story points-urile numerice
+      return b.points - a.points;
+    });
+    // Actualizează state-ul pentru a reflecta noua ordine a taskurilor
+    setTasks([...props.tasks]);
+    updateColumn(props.column._id, tasks)
+  };
+
+  const makeColumnDONE = () => {
+    updateDoneFieldColumn(props.column._id, true)
+    props.tasks.map(async (task) => {
+      await axios.put(`http://localhost:5000/tasks/${task._id}`, {
+        done: true
+      }).then((res) => {
+        setTasks((prev) => [...prev, res.data.data]);
+      }).catch((err) => {
+        console.log(err)
+      })
+    });
+    
+  }
+
+  const getColumn = () => {
+    const id = props.column._id
+    axios.get(`http://localhost:5000/column/get-by-id/${id}`).then((res) => {
+      dispatch(setSelectedBoardRedux(props.selectedBoard))
+    })
+  }
+  
+  const handleAreYouSureButtonClose = () => {
+    setAreYouSureButton(false);
+  };
+
+  
+  const handleDeleteColumn = async () => {
+    const boardId = props.selectedBoard?._id;
+    await axios.delete(`http://localhost:5000/column/${column._id}/${boardId}`)
+      .then((res) => {
+        toast.success('Column deleted successfully!', {
+          position: "bottom-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          progress: undefined,
+          draggable: true,
+          theme: "light",
+        });
+        const id = res.data.data._id;
+        console.log(res.data.data._id)
+  
+        dispatch(setSelectedBoardRedux(props.selectedBoard))
+        handleAreYouSureButtonClose();
+      }).catch((err) => {
+        console.log(err);
+        toast.error('An error occurred while deleting the column. Please try again later.', {
+          position: "bottom-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          progress: undefined,
+          draggable: true,
+          theme: "light",
+        });
+      });
+  };
   
 
   return (
@@ -262,7 +408,10 @@ const handleCloseColumnDetails = () => {
           <Title {...provided.dragHandleProps}>
             {props.column.title}
           </Title>
-          <IconButton sx={{ width: '40px', height: '40px'}} onClick={handleOpenColumnDetails}><MoreHorizIcon /></IconButton>
+          <div style={{ marginLeft: 'auto', alignItems: 'center', display: 'flex' }}>
+            {props.done ? <CheckCircle style={{color: 'green'}}/> : null}
+            <IconButton sx={{ width: '40px', height: '40px'}} onClick={handleOpenColumnDetails}><MoreHorizIcon /></IconButton>
+          </div>
           <Menu
             sx={{ ml: '12px'}}
             anchorEl={anchorColumn}
@@ -284,13 +433,58 @@ const handleCloseColumnDetails = () => {
             open={Boolean(anchorColumn)}
             onClose={handleCloseColumnDetails}
           > 
-            <Box sx={{ width: '200px', height: '370px',  padding: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ width: '300px', height: 'auto', padding: 2, display: 'flex', flexDirection: 'column', }}>
                 <IconButton onClick={handleCloseColumnDetails} style={{alignSelf: 'flex-end' , color: 'black'}}>
                     <Close style={{ fontSize: '16px' }}/>
                 </IconButton>
-                <Typography style={{alignSelf: 'center'}} variant='body2'>{props.column.title}</Typography>
-                
-              
+                <Typography style={{ alignSelf: 'center', marginBottom: '20px'}} variant='body2'>Column actions</Typography>
+                <Typography variant='subtitle2'>Sort tasks by...</Typography>
+                <ListItem>
+                  <DueDateButton onClick={sortByDueDate}>Due date</DueDateButton>
+                </ListItem>
+                <ListItem>
+                  <DueDateButton onClick={sortByTitle}>Title</DueDateButton>
+                </ListItem>
+                <ListItem>
+                  <DueDateButton onClick={sortByStoryPoints}>Story points</DueDateButton>
+                </ListItem>
+                {!props.done ? (
+                  <>
+                  <Divider />
+                    <ListItem >
+                      <DueDateButton onClick={makeColumnDONE}>
+                        <div  style={{display: 'flex', gap: 4, alignItems: 'center'}}>
+                        <CheckCircle style={{color: 'green'}}/>
+                        <span>Make it a DONE column</span>
+                        </div>
+                      </DueDateButton>
+                  </ListItem>   
+
+                </>
+                ) : null}
+                             
+                <Divider />
+                <ListItem>
+                  <DueDateButton>Archive</DueDateButton>
+                </ListItem>
+                <ListItem>
+                  <DueDateButton onClick={handleAreYouSureButton}>Delete</DueDateButton>
+                </ListItem> 
+                {
+                  areYouSureButton ? (
+                  <div style={{ textAlign: 'center'}}>
+                    <Typography variant='body2' sx={{marginBottom: 2}}><i>Are you sure you want to delete this column?</i></Typography>
+                    <Button onClick={handleAreYouSureButtonClose}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleDeleteColumn} sx={{backgroundColor: 'red', color: 'white', ":hover": {backgroundColor: 'rgba(255, 0, 0, 0.522)'}}}>
+                      Delete
+                    </Button>
+                  </div>
+                  ) : (
+                    null
+                  )
+                }         
             </Box>
           </Menu>
         </div>
@@ -309,9 +503,10 @@ const handleCloseColumnDetails = () => {
                   task={task} 
                   index={index} 
                   selectedBoard={props.selectedBoard}
+                  done={props.done}
                 />
               ))}
-              <TaskCard style={addNewCardStyle}>
+              <TaskCard style={addNewCardStyle} >
                 <Input 
                   placeholder="Enter card title..." 
                   disableUnderline={true} 
@@ -333,10 +528,13 @@ const handleCloseColumnDetails = () => {
             </TaskList>
           )}
         </Droppable>
-        <AddNewCardButton onClick={addNewCard} style={addButtonStyle}>
-          <AddIcon />
-          <span>Add a card</span>
-        </AddNewCardButton>
+        {!props.done ? (
+          <AddNewCardButton onClick={addNewCard} style={addButtonStyle}>
+            <AddIcon />
+            <span>Add a card</span>
+          </AddNewCardButton>
+        ) : null}
+        
         
       
       </ColumnCard>

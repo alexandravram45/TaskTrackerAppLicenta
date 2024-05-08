@@ -13,50 +13,41 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppState, setSelectedBoardRedux } from '../store';
 import { User } from '../App';
 import { Scheduler } from '@aldabil/react-scheduler';
+import CalendarView from './CalendarView';
+import Points from './Points';
 
 
 export interface Board {
   _id: string;
   name: string;
   user: string;
-  columns: Array<
-    {_id: string, 
-      title: String,
-      tasks: Array<{ 
-        title: string, 
-        _id: string,
-        description: string,
-        dueDate: Date | null,
-        points: number | null, 
-        assignee: User | null,
-      }>;
-    }>;
-  tasks: Array<{
-    _id: string;
-    title: string;
-    description: string,
-    dueDate: Date | null,
-    points: number | null, 
-    assignee: User | null,
-  }>;
+  columns: Array<ColumnInterface>;
+  tasks: Array<TaskInterface>;
   color: string;
   createdAt: Date;
   favorite: Boolean;
   members: Array<User>;
 }
 
-interface Task {
+export interface ColumnInterface {
+  _id: string, 
+  title: String,
+  tasks: Array<TaskInterface>;
+  done: Boolean;
+}
+
+export interface TaskInterface {
   _id: string;
   title: string;
+  description: string,
+  dueDate: Date | null,
+  points: number | null, 
+  assignee: string | null,
+  done: Boolean | null
 }
 
 interface HomeProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    color: string;
-  };
+  user: User
 }
 
 
@@ -67,6 +58,7 @@ const Container = styled.div`
   /* background: rgb(145,167,244);
   background: linear-gradient(23deg, rgba(145,167,244,0.6811974789915967) 0%, rgba(255,77,157,1) 100%); */
   background-image: ${props => props.color !== undefined ? props.color : 'white'};
+  
 `;
 
 export const fetchTaskById = async (taskId: string) => {
@@ -142,7 +134,6 @@ const Home: React.FC<HomeProps> = ({ user }) => {
     const selectedBoardRedux = useSelector((state: AppState) => state.selectedBoard);
     const dispatch = useDispatch()
 
-
     const [boardDataFetched, setBoardDataFetched] = useState<boolean>(false);
     const location = useLocation();
 
@@ -167,18 +158,14 @@ const Home: React.FC<HomeProps> = ({ user }) => {
     useEffect(() => {
       if (location.pathname === '/boards'){
         getAllBoards(user.id).then((res) => {
-          // Set selectedBoard to null when navigating to '/boards'
           setSelectedBoard(null);
           console.log(location.pathname)
-          // You may set the fetched boards in state if needed
         });
+      } else if (location.pathname === '/progress'){
+        setSelectedBoard(null);
+        setSelectedBoardRedux(null)
       }
       else {
-        // console.log(location.pathname)
-        // console.log(selectedBoard)
-        // console.log(boardDataFetched)
-        // console.log(selectedBoardRedux)
-
         if (selectedBoardRedux){
           fetchBoardById(selectedBoardRedux._id, user.id).then((res) =>{
             setSelectedBoard(res)
@@ -199,7 +186,7 @@ const Home: React.FC<HomeProps> = ({ user }) => {
             });
       }
       else if (!boardDataFetched){
-        if (location.pathname.startsWith("/boards/")){
+        if (location.pathname.startsWith("/boards/") && !location.pathname.endsWith("/calendarView") ) {
           const boardId = location.pathname.split('/').pop();
           console.log(boardId)
           if (boardId) {
@@ -210,8 +197,10 @@ const Home: React.FC<HomeProps> = ({ user }) => {
             }
           }
         } else {
+          // Alte acțiuni pentru alte rute
         }
       }
+      
     }
 
     }, [selectedBoard?._id, user.id, boardDataFetched, location.pathname, selectedBoardRedux]);
@@ -222,14 +211,6 @@ const Home: React.FC<HomeProps> = ({ user }) => {
       setSelectedBoard(board);
       setBoardDataFetched(false);
       dispatch(setSelectedBoardRedux(board))
-
-      
-      // localStorage.setItem("lastVisitedBoard", board._id);
-      // console.log(localStorage.getItem("lastVisitedBoard"))
-      // let lastVisitedBoard = localStorage.getItem("lastVisitedBoard");
-      //   if (lastVisitedBoard && !selectedBoard) {
-      //     fetchBoardById(lastVisitedBoard, user.id)
-      //   }
     };
 
  
@@ -246,6 +227,16 @@ const Home: React.FC<HomeProps> = ({ user }) => {
     })  
   }
 
+  const updateTask = async (taskId: string) => {
+    await axios.put(`http://localhost:5000/tasks/${taskId}`, {
+      done: true
+    }).then((res) => {
+      dispatch(setSelectedBoardRedux(selectedBoard))
+      console.log(res.data)
+    }).catch((err) => {
+      console.log(err)
+    })
+  }
   
   const updateColumn = async (columnId: string, tasks: Array<( { title: string, _id: string, description: string, dueDate: Date | null })>) => {
     const taskIds = tasks.map(task => task._id); // Extrage doar id-urile task-urilor
@@ -316,6 +307,14 @@ const Home: React.FC<HomeProps> = ({ user }) => {
       if (!start || !finish) {
         console.error('Start or finish column is undefined');
         return;
+      }
+
+      const isMovingFromUndoneToDone = start.done !== true && finish.done === true;
+
+      if (isMovingFromUndoneToDone) {
+          // Actualizăm câmpul "done" al sarcinii
+          const updatedTask = { ...draggedTask, done: true };
+          updateTask(draggedTask._id)
       }
       
       if (start._id == finish._id){
@@ -414,16 +413,16 @@ const Home: React.FC<HomeProps> = ({ user }) => {
     return (
         <Container color={selectedBoard?.color}>
           <SideBar user={user} onBoardSelect={handleBoardSelect} />
-            <div id='home' style={{width: '86%', backgroundColor: 'transparent', float: 'left', borderTopLeftRadius: 20}}>
+            <div id='home' style={{width: '86%', backgroundColor: 'transparent', marginTop: '61px', float: 'left', borderTopLeftRadius: 20}}>
               <Routes>
-                <Route path="/" element={<AllBoards user={user}/>} />
-                <Route path=":boardId" element={<BoardComponents selectedBoard={selectedBoard} onDragEnd={onDragEnd} user={user}/>} />
-                <Route path=":boardId/calendarView" element={<Scheduler />} />
+                <Route path="/boards" element={<AllBoards />} />
+                <Route path="boards/:boardId" element={<BoardComponents selectedBoard={selectedBoard} onDragEnd={onDragEnd} user={user}/>} />
+                <Route path="boards/:boardId/calendarView" element={<CalendarView />} />
+                <Route path="/progress" element={<Points />} />
               </Routes>
             </div>
         </Container>
     )
 }
-
 
 export default Home;

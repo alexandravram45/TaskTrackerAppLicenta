@@ -17,14 +17,6 @@ import CheckIcon from '@mui/icons-material/Check';
 import { backgroundColors } from '../colors';
 import StarIcon from '@mui/icons-material/Star';
 
-interface AllBoardsProps {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-  };
-}
-
 const Container = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -74,7 +66,7 @@ const BoardCard = styled(Card)`
   }
 `;
 
-const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
+const AllBoards = () => {
   const [showAddNewBoardButton, setShowAddNewBoardButton] = useState(true);
   const [newBoardName, setNewBoardName] = useState('');
   const [boards, setBoardsHere] = useState<Board[]>([]);
@@ -82,7 +74,11 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
   const boardsRedux = useSelector((state: AppState) => state.boards); 
   const [sortBy, setSortBy] = useState<string>('');
   const [filterBy, setFilterBy] = useState<string>('');
+  const currentUser = useSelector((state: AppState) => state.currentUser);
   const dispatch = useDispatch()
+  const selectedBoard = useSelector((state: AppState) => state.selectedBoard);
+
+  
 
 
   const handleSortChange = (event: SelectChangeEvent<string>) => {
@@ -93,9 +89,13 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
     setFilterBy(event.target.value);
   };
 
+  useEffect(() => {
+    console.log(currentUser?.id)
+  })
+
   const addNewBoard = async (title: String, color: String) => {
       await axios.post('http://localhost:5000/board', {
-          user: user,
+          user: currentUser,
           name: title,
           columns: [],
           color: color,
@@ -178,7 +178,7 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
 
   const getAllBoards = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/board?userId=${user.id}`);
+      const response = await axios.get(`http://localhost:5000/board?userId=${currentUser?.id}`);
       let sortedBoards = response.data;
       console.log(sortedBoards)
 
@@ -231,12 +231,16 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', marginTop: '50px', padding: '50px', justifyContent: 'center', alignItems: 'center' }}>
+      <Card style={{ margin: 30, padding: 30}}>
+      
+      <div style={{ display: 'flex', padding: '40px', justifyContent: 'center', alignItems: 'center' }}>
         <img src={require('../ticked.png')} width='300px' alt='ticked' style={{ marginRight: '20px' }} />
         <Button style={{backgroundColor: '#0c66e4', color: 'white'}}><PersonAddAltIcon style={{marginRight: 10}} />Invite members</Button>
       </div>
+      </Card>
 
-      <Divider />
+      <Card style={{ margin: 30, padding: 30, paddingBottom: 60}}>
+
       <Typography  style={{padding: '20px'}} variant='h2'>All boards</Typography>
 
       <FormControl style={{width: '200px', marginLeft: '20px'}}>
@@ -337,6 +341,8 @@ const AllBoards: React.FC<AllBoardsProps> = ({ user }) => {
           </Link>
         ))}
       </Container>
+      </Card>
+
     </div>
   )
 }
