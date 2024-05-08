@@ -4,6 +4,24 @@ const taskModel = require('./task.model')
 const { updateBoardAfterTaskDeletion } = require("../boards/controller")
 
 exports.getAllTasks = async (req, res, next) => {
+  taskModel.find().then(
+    (results) => {
+      res.send({
+          status: 200,
+          message: "All tasks from database",
+          data: results,
+        });
+    }, 
+    (error) => {
+        res.send({
+            status: 500,
+            message: "Something went wrong!",
+            data: error,
+        });
+    })
+}
+
+exports.getTasksByColumnId = async (req, res, next) => {
   let columnId = req.params.id
     taskModel.findOne({ columnId: columnId }).then(
         (results) => {
@@ -128,6 +146,7 @@ exports.updateTask = (req, res, next) => {
             board: body.board,
             assignee: body.assignee,
             points: body.points,
+            done: body.done,
             },
         }
         )

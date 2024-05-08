@@ -10,4 +10,6 @@ router.put('/:id', columnController.updateColumn)
 
 router.post('/', columnController.createColumn)
 
+router.delete('/:id/:boardId', columnController.deleteColumn)
+
 module.exports = router;

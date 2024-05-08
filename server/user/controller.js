@@ -3,10 +3,12 @@ const bcrypt = require("bcrypt")
 const jwt = require('jsonwebtoken');
 const BlackList = require('./Blacklist')
 const nodemailer = require('nodemailer')
+const crypto = require("crypto");
 
 const User = require("./user.model");
 const Board = require("../boards/board.model");
 const Task = require("../tasks/task.model")
+const Token = require("../token/token.model")
 
 const Column = require("../columns/column.model");
 
@@ -16,6 +18,22 @@ const getUserById = async (req, res) => {
   
   try {
     const user = await User.findById(userId)
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+}
+
+const getUserByEmail = async (req, res) => {
+  const email = req.params.email;
+  
+  try {
+    const user = await User.findOne({ email: email })
 
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
@@ -45,14 +63,21 @@ function getRandomColor() {
 }
 
 const register = async (req, res, next) => {
-  const { username, email, password } = req.body;
+  const { username, email, firstName, lastName, password } = req.body;
 
-  if (!username || !password || !email){
+  if (!username || !password || !email || !firstName || !lastName){
     res.status(401).json({message: "Send needed params"})
     return
   }
   try {
-    const user = new User({ username, email, password, color: getRandomColor() });
+    const user = new User({ 
+      username, 
+      email, 
+      firstName, 
+      lastName, 
+      password, 
+      color: getRandomColor() 
+    });
     const existingUser = await User.findOne({ email });
     if (existingUser)
         return res.status(400).json({
@@ -60,6 +85,7 @@ const register = async (req, res, next) => {
             data: [],
             message: "It seems you already have an account, please log in instead.",
         });
+
     await user.save();
 
     const tasks = await Promise.all([
@@ -103,19 +129,7 @@ const register = async (req, res, next) => {
     await Promise.all(defaultColumns.map(column =>
         Column.findByIdAndUpdate(column._id, { boardId: defaultBoard._id })
     ));
-    
-    res.status(201).json({
-      message: "User successfully registered",
-      user: user._id,
-      board: defaultBoard,
-    })
 
-    // const token = new Token({
-    //   userId: user._id,
-    //   token: user.generateAccessJWT()
-    // })
-
-    // user.token = token.token;
     const token = generateConfirmationToken(user._id)
     console.log(token)
 
@@ -123,6 +137,13 @@ const register = async (req, res, next) => {
       .then(() => {
         user.token = token;
       }).catch((err) => console.log(err))
+
+      res.status(201).json({
+        message: "User successfully registered",
+        user: user._id,
+        board: defaultBoard,
+        token: token,
+      });
 
   } catch(err){
     res.status(401).json({ error: err.message })
@@ -139,7 +160,7 @@ const login = async (req, res, next) => {
   try {
     const user = await User.findOne({ username })
     if (!user){
-      return res.status(404).json({message: "Invalid email or password."})
+      return res.status(404).json({message: "Invalid username or password."})
     }
 
     if (!user.verified) {
@@ -147,6 +168,7 @@ const login = async (req, res, next) => {
     }
 
     const passwordMatch = await user.comparePassword(password);
+    console.log(passwordMatch)
     if (!passwordMatch){
       return res.status(401).json({message: "Incorrect password"})
     } 
@@ -164,7 +186,10 @@ const login = async (req, res, next) => {
     req.user = {
       id: user._id,
       username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
+      token: user.token,
     };
 
     res.status(201).json({
@@ -230,7 +255,7 @@ const logout = async (req, res, next) => {
 }
 
 const generateConfirmationToken = (userId) => {
-  return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '1d' });
+  return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '1h' });
 };
 
 const sendConfirmationEmail = async (email, token, userId) => {
@@ -284,20 +309,11 @@ const confirmEmail = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    // const token = user.token;
-    // if (!token){
-    //   return res.status(400).json({ message: "Invalid link" });
-    // }
     await User.findByIdAndUpdate(userId, { verified: true });
 
     await user.save();
     res.status(200).json({ message: 'Email verified successfully' }); // Returnează un răspuns JSON către client
 
-    //await login(req, res)
-
-    // Redirect to home page after confirmation
-    //res.redirect('/boards');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -330,7 +346,7 @@ const sendInvitationLink = async (req, res) => {
     html: `<h1>Hello!</h1>
           <div>
             <p>${invitedBy} invited you to a Ticked Board</p>
-            <p>Join them on Trello to collaborate, manage projects, and reach new productivity peaks.</p>
+            <p>Join them on Ticked to collaborate, manage projects, and reach new productivity peaks.</p>
             <a href="${process.env.CLIENT_URL}/board/${boardId}/join/${userId}">Go to board<a>
           </div>`
   }
@@ -349,6 +365,154 @@ const sendInvitationLink = async (req, res) => {
 
 }
 
+const sendResetPasswordEmail = async (req, res) => {
+  let email = req.body.email;
+  let userId = req.params.id;
 
-module.exports = { getUserById, login, register, logout, confirmEmail, sendInvitationLink }
+  let token = await Token.findOne({ userId: userId });
+
+  if (token) { 
+    await token.deleteOne()
+  };
+
+  let resetToken = crypto.randomBytes(32).toString("hex");
+  // const hash = await bcrypt.hash(resetToken, Number(10));
+
+  await new Token({
+    userId: userId,
+    token: resetToken,
+    createdAt: Date.now(),
+  }).save().then((response) => console.log("s-a salvat tokenul: " + response));
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: "ticked.noreply@gmail.com",
+      pass: "dsguyzuhbpzoepcy",
+    },
+  });
+  
+  const mailOptions = {
+    from: 'ticked.noreply@gmail.com',
+    to: email,
+    subject: `Reset your password`,
+    html: `<h1>Hello!</h1>
+          <div>
+            <p>Click the link below to reset your Ticked account password.</p>
+            <a href="${process.env.CLIENT_URL}/resetPassword/${resetToken}">Reset password<a>
+          </div>`
+  }
+
+  try{
+    transporter.sendMail(mailOptions, (err, info) => {
+  
+      console.log('Message sent: %s', info.messageId);
+      });
+
+      res.status(200).json({ message: 'Password reset email sent!' });
+  
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  };
+
+}
+
+const resetPassword = async (req, res) => {
+  // console.log(req.params.id, )
+  // const userId = req.params.id;
+  const newPassword = req.body.password;
+  const token = req.params.token
+
+  const tokenObj = await Token.findOne({token: token});
+
+  if (!tokenObj) {
+    res.status(400).json({message: 'Invalid or expired password reset token'});
+  }
+
+  const userId = tokenObj.userId;
+  console.log(userId)
+  const user = await User.findOne({_id: userId});
+  console.log(user._id)
+
+  if (!user) {
+    res.status(400).json({message: 'User not found'});
+  }
+    
+  // const isValid = await bcrypt.compare(token, tokenObj.token);
+  // if (!isValid) {
+  //   console.log(token)
+  //   console.log(tokenObj.token)
+
+  //   res.status(400).json({message: 'Invalid or expired password reset token'});
+  // }
+
+  const hash = await bcrypt.hash(newPassword, Number(10));
+  await User.updateOne(
+    { _id: userId },
+    { $set: { password: hash } },
+    { new: true }
+  );
+  await tokenObj.deleteOne();
+}
+
+
+const sendAssignNotification = async (req, res) => {
+
+  let email = req.body.email;
+  let boardTitle = req.body.boardTitle;
+  let taskTitle = req.body.taskTitle;
+
+  let boardId = req.params.boardId;
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: "ticked.noreply@gmail.com",
+      pass: "dsguyzuhbpzoepcy",
+    },
+  });
+  
+  const mailOptions = {
+    from: 'ticked.noreply@gmail.com',
+    to: email,
+    subject: `You have been assigned a new task`,
+    html: `<h1>Hello!</h1>
+          <div>
+            <p>You have been assigned a new task with title: <b>${taskTitle}</b>, in board <i>${boardTitle}</i></p>
+            <a href="${process.env.CLIENT_URL}/boards/${boardId}">Go to board<a>
+          </div>`
+  }
+
+  try{
+    transporter.sendMail(mailOptions, (err, info) => {
+  
+      console.log('Message sent: %s', info.messageId);
+      });
+
+      res.status(200).json({ message: 'Email invitation sent!' });
+  
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  };
+
+}
+
+module.exports = { 
+  getUserById, 
+  login, 
+  register, 
+  logout, 
+  confirmEmail, 
+  sendInvitationLink, 
+  sendAssignNotification, 
+  resetPassword, 
+  sendResetPasswordEmail,
+  getUserByEmail,
+}
   

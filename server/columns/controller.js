@@ -1,6 +1,7 @@
 const mongoose = require("mongoose")
 
 const columnModel = require('./column.model');
+const { updateBoardAfterColumnDeletion } = require("../boards/controller");
 
 exports.createColumn = (req, res, next) => {
     let boardId = req.body.boardId;
@@ -11,6 +12,7 @@ exports.createColumn = (req, res, next) => {
       title,
       boardId,
       tasks,
+      done: false
     });
   
     column.save().then(
@@ -87,22 +89,29 @@ exports.getColumnsByBoardId = (req, res, next) => {
     try {
       let tasks = req.body.taskIds;
       let _id = req.params.id;
-  
-      console.log(tasks);
-  
+      let done = req.body.done;
+
       let updateQuery;
-      if (Array.isArray(tasks)) {
-        // If tasks is an array, set the tasks directly
-        updateQuery = { $set: { tasks: tasks } };
-      } else if (typeof tasks === 'string') {
-        // If tasks is a single task ID string, push it to the existing tasks
-        updateQuery = { $push: { tasks: tasks } };
-      } else {
-        return res.status(400).json({
-          message: "Invalid task format. TaskIds must be either an array of taskIds or a single taskId string.",
-        });
+
+      if (typeof done !== 'undefined') {
+        updateQuery = { $set: { done: done } };
       }
   
+      if (tasks) {
+        if (Array.isArray(tasks)) {
+          // If tasks is an array, set the tasks directly
+          updateQuery = { $set: { tasks: tasks } };
+        } else if (typeof tasks === 'string') {
+          // If tasks is a single task ID string, push it to the existing tasks
+          updateQuery = { $push: { tasks: tasks } };
+        } else {
+          return res.status(400).json({
+            message: "Invalid task format. TaskIds must be either an array of taskIds or a single taskId string.",
+          });
+        }
+        
+      } 
+
       let newColumn = await columnModel.findOneAndUpdate(
         { _id },
         updateQuery,
@@ -127,3 +136,36 @@ exports.getColumnsByBoardId = (req, res, next) => {
     }
   };
   
+  
+exports.deleteColumn = (req, res, next) => {
+  // va lua id-ul ticketului din request
+  let columnId = req.params.id;
+
+  columnModel.findOneAndDelete({ _id: columnId }).then(
+      async (result) => {
+        try {
+          const boardId = req.params.boardId; // Presupunând că ai acces la ID-ul bordului asociat taskului
+          await updateBoardAfterColumnDeletion(boardId, columnId);
+          res.send({
+              status: 200,
+              message: "Deleted column with success!",
+              data: result,
+          });
+        } catch (err) {
+          console.error(err);
+          res.status(500).json({
+              status: 500,
+              message: "Something went wrong while updating the board!",
+              error: err.message,
+          });
+        }
+      },
+      (error) => {
+      res.send({
+          status: 500,
+          message: "Something went wrong!",
+          data: error,
+      });
+      }
+  );
+};

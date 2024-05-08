@@ -5,18 +5,18 @@ import styled from 'styled-components';
 import KeyIcon from '@mui/icons-material/Key';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import { toast } from 'react-toastify';
-import axios, { AxiosError } from 'axios';
-import { Formik, Form, Field, useFormik } from 'formik';
+import axios from 'axios';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
 import { useDispatch } from 'react-redux';
 import { loginAction, setCurrentUser } from '../store';
-import { json } from 'stream/consumers';
 import { useLocation, useNavigate, useParams } from 'react-router';
 
 
 interface LoginProps {
   handleToggle: () => void,
+  handleToggleReset: () => void,
   boardId: string
 }
 
@@ -30,7 +30,7 @@ const LoginContainer = styled.div`
 
 
 
-const Login:React.FC<LoginProps> = ({ handleToggle, boardId }) => {
+const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }) => {
 
   const [error, setError] = useState("")
   const navigate = useNavigate();
@@ -151,12 +151,14 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId }) => {
         <StyledButton type='submit'>
             <span>Log in</span>
         </StyledButton>
-        { location.pathname.includes('join') ? null :
+      </form>
+
+        <Link component="button" onClick={handleToggleReset} style={{color: '#5B42F3'}} underline="hover">
+            Forgot password?
+        </Link>
         <Link component="button" onClick={handleToggle} style={{color: '#5B42F3'}} underline="hover">
             Don't have an account?
         </Link>
-        }
-      </form>
 
     </LoginContainer>
     </Slide>

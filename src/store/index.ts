@@ -13,7 +13,10 @@ interface AppState {
 interface User {
   id: string;
   username: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  color: string;
 }
 
 const initialState: AppState = {
@@ -32,7 +35,7 @@ const logoutAction = createAction('LOGOUT');
 const setSelectedBoardRedux = createAction<Board | null>('SET_SELECTED_BOARD'); // Define action for setting selected board
 const setBoards = createAction<Board[] | null>('SET_BOARDS');
 const updateBoardNameInStore = createAction<Board>('UPDATE_BOARD_NAME');
-const setCurrentUser = createAction<User>('SET_CURRENT_USER');
+const setCurrentUser = createAction<User | null>('SET_CURRENT_USER');
 
 // Define reducer
 const rootReducer = createReducer(initialState, (builder) => {

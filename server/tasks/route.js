@@ -2,7 +2,9 @@ const express = require('express');
 const taskController = require('./controller');
 const router = express.Router();
 
-router.get('/get-by-columnId/:id', taskController.getAllTasks)
+router.get('/get-by-columnId/:id', taskController.getTasksByColumnId)
+
+router.get('/', taskController.getAllTasks)
  
 router.post('/', taskController.addTask)
 

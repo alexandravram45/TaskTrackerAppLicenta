@@ -54,6 +54,7 @@ exports.getBoardById = async (req, res, next) => {
       }
 }
   
+
 exports.getAllBoards = async (req, res, next) => {
   try {
       const { userId } = req.query;
@@ -262,3 +263,53 @@ exports.updateBoardAfterTaskDeletion = async (boardId, deletedTaskId) => {
         throw error; // Aruncă eroarea pentru a fi gestionată în funcția care apelează această metodă
     }
 };
+
+
+
+exports.updateBoardAfterColumnDeletion = async (boardId, deletedColumnId) => {
+  try {
+    console.log(typeof deletedColumnId)
+      // Găsește bordul după ID
+      const board = await boardModel.findById(boardId);
+      
+      if (!board) {
+          throw new Error('Board not found');
+      }
+      
+      board.columns = board.columns.filter(column => {
+        const columnString = column.toString();
+        const deletedColumnString = deletedColumnId.toString();
+        console.log(`Comparing task ${columnString} with deleted column ${deletedColumnString}`);
+        return columnString !== deletedColumnString;
+      });        
+      
+      await board.save();
+      
+      console.log(`Board ${boardId} updated after column deletion`);
+  } catch (error) {
+      console.error('Error updating board after column deletion:', error);
+      throw error; 
+  }
+};
+
+
+exports.deleteBoard = (req, res, next) => {
+  let boardId = req.params.id;
+  boardModel.findOneAndDelete({ _id: boardId }).then(
+      (result) => {
+        res.send({
+            status: 200,
+            message: "Deleted board with success!",
+            data: result,
+        });
+      },
+      (error) => {
+        res.send({
+            status: 500,
+            message: "Something went wrong!",
+            data: error,
+        });
+      }
+  )
+};
+

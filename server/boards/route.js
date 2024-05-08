@@ -16,4 +16,6 @@ router.put('/add-to-favorites/:id', boardController.addToFavorites)
 
 router.get('/:boardId/join/:userId', boardController.addMemberToBoard)
 
+router.delete('/:id', boardController.deleteBoard)
+
 module.exports = router;

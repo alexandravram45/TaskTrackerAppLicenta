@@ -7,6 +7,7 @@ const taskSchema = mongoose.Schema({
     description: { type: String },
     points: { type: Number },
     assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+    done: { type: Boolean }
 });
 
 const Task = mongoose.model('Task', taskSchema);

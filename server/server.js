@@ -11,6 +11,8 @@ const taskRoutes = require('./tasks/route');
 const userRoutes = require('./user/route');
 const boardRoutes = require('./boards/route.js');
 const columnroutes = require('./columns/route.js');
+const commentRoutes = require('./comments/route.js');
+const tokenRoutes = require('./token/route.js');
 
 app.use(cors({
     origin: 'http://localhost:3000',  // Replace with the actual origin of your client application
@@ -38,7 +40,8 @@ app.use('/tasks', taskRoutes)
 app.use('/user', userRoutes)
 app.use('/board', boardRoutes)
 app.use('/column', columnroutes)
-
+app.use('/token', tokenRoutes)
+app.use('/comment', commentRoutes)
 
 app.get('/profile', authenticate, (req, res) => {
     console.log(req.user)
