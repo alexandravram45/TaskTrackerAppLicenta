@@ -1,21 +1,24 @@
 const express = require('express');
 const boardController = require('./controller');
+const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 
-router.get('/', boardController.getAllBoards)
+router.get('/', authenticate, boardController.getAllBoards)
 
-router.post('/', boardController.createBoard)
+router.get('/archived', authenticate, boardController.getAllArchivedBoards)
 
-router.get('/:id', boardController.getBoardById)
+router.post('/', authenticate, boardController.createBoard)
 
-router.put('/:id', boardController.updateBoard)
+router.get('/:id', authenticate, boardController.getBoardById)
 
-router.put('/update-name/:id', boardController.updateBoardName)
+router.put('/:id', authenticate, boardController.updateBoard)
 
-router.put('/add-to-favorites/:id', boardController.addToFavorites)
+router.put('/update-name/:id', authenticate, boardController.updateBoardName)
+
+router.put('/add-to-favorites/:id', authenticate, boardController.addToFavorites)
 
 router.get('/:boardId/join/:userId', boardController.addMemberToBoard)
 
-router.delete('/:id', boardController.deleteBoard)
+router.delete('/:id',authenticate, boardController.deleteBoard)
 
 module.exports = router;

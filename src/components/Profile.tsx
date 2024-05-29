@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
-import { StyledButton } from './AppMenuBar'; // Import your StyledButton component
+import React, { useEffect, useState } from 'react';
+import { StyledButton } from './AppMenuBar';
 import axios from 'axios';
-
 import { useDispatch, useSelector } from 'react-redux';
 import { AppState, logoutAction, setCurrentUser } from '../store';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { Typography } from '@mui/material';
+import { Link } from 'react-router-dom';
 
-
-interface ProfileProps {
-    handleToggle: () => void;
-}
-
-const Profile: React.FC<ProfileProps> = ( handleToggle ) => {
+const Profile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate()
   const user = useSelector((state: AppState) => state.currentUser);
   const [userAfterLogout, setUserAfterLogout] = useState(user);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [title, setTitle] = useState('');
+  const [badgeImage, setBadgeImage] = useState('');
+  const location = useLocation()
+  const isOnLanding = location.pathname === '/landing'
 
   const handleLogout = async (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault()
-    axios.post('http://localhost:5000/user/logout', {}, { withCredentials: true })
+    axios.post('/user/logout', {}, { withCredentials: true })
         .then((res) => {
             toast.success('Logged out succesfully!', {
                 position: "bottom-right",
@@ -35,17 +35,38 @@ const Profile: React.FC<ProfileProps> = ( handleToggle ) => {
                 });
 
             dispatch(logoutAction())
-          
-            console.log("user after dispatch:", res.data.user)
             setUserAfterLogout(res.data.user)
             dispatch(setCurrentUser(null))
-            navigate('/')
-            window.location.reload()
-
-            
+            navigate('/landing')
         })
         .catch(err => console.log(err.message));
   }
+
+    type TitleImages = {
+      [key: string]: string;
+  }
+
+    const titleImages: TitleImages = {
+      Novice: require('../images/novice.png'),
+      Explorer: require('../images/explorer.png'),
+      Challenger: require('../images/challenger.png'),
+      Wizard: require('../images/wizard.png'),
+  };
+
+  useEffect(() => {
+    const fetchPoints = async () => {
+      try {
+        const response = await axios.get(`user/${user?.id}/points`);
+        setTotalPoints(response.data.totalPoints);
+        setTitle(response.data.title);
+        setBadgeImage(titleImages[response.data.title])
+      } catch (error) {
+        console.error('Error fetching points:', error);
+      }
+    };
+
+    fetchPoints();
+  }, [user?.id]);
 
   return (
     <div>
@@ -53,11 +74,12 @@ const Profile: React.FC<ProfileProps> = ( handleToggle ) => {
       <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 6}}>
         <Typography variant='h5'>Hello, {user?.firstName}!</Typography>
         <Typography variant='subtitle2'>Current title</Typography>
-        <img src={require('../novice.png')} width='60px' alt='novice' />
-        <Typography  variant='h5'>Novice</Typography>
+        <img src={badgeImage} width='60px' alt='novice' />
+        <Typography  variant='h5'>{title}</Typography>
         <StyledButton onClick={handleLogout}>
             <span>Logout</span>
         </StyledButton>
+        {isOnLanding ? <Link to='/home/boards'>Go to your boards</Link> : null}
       </div>
          :  
          <p>Succesfully logged out!</p>

@@ -8,7 +8,8 @@ const boardSchema = new mongoose.Schema({
   color: { type : String },
   createdAt: { type: Date },
   favorite: { type: Boolean },
-  members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+  members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  archived: { type: Boolean },
 });
 
 const Board = mongoose.model('Board', boardSchema);

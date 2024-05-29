@@ -1,5 +1,7 @@
 import { configureStore, createAction, createReducer, PayloadAction } from '@reduxjs/toolkit';
 import { Board } from '../components/Home';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 
 interface AppState {
   isRegistered: boolean;
@@ -28,6 +30,7 @@ const initialState: AppState = {
   updateBoardNameInStore: null
 };
 
+
 // Define actions
 const loginAction = createAction<User>('LOGIN');
 const registerAction = createAction('REGISTER');
@@ -36,6 +39,11 @@ const setSelectedBoardRedux = createAction<Board | null>('SET_SELECTED_BOARD'); 
 const setBoards = createAction<Board[] | null>('SET_BOARDS');
 const updateBoardNameInStore = createAction<Board>('UPDATE_BOARD_NAME');
 const setCurrentUser = createAction<User | null>('SET_CURRENT_USER');
+
+export const fetchBoard = createAsyncThunk('board/fetchBoard', async (boardId: string) => {
+  const response = await axios.get(`/board/${boardId}`);
+  return response.data;
+});
 
 // Define reducer
 const rootReducer = createReducer(initialState, (builder) => {

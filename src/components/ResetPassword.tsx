@@ -33,10 +33,9 @@ const ResetPassword = () => {
     }, [])
 
     const findUserToken = async (id: string | undefined) => {
-        await axios.get(`http://localhost:5000/token/${id}`).then((res) => {
+        await axios.get(`/token/${id}`).then((res) => {
            setValidReset(true)
            setUserId(res.data.userId)
-           console.log(res.data)
         }).catch((err) => {
             setValidReset(false)
             setLoading(false)
@@ -46,7 +45,7 @@ const ResetPassword = () => {
 
     const handlePasswordReset = async (userId: string | undefined, newPassword: string, token: string | undefined) => {
         setButtonPressed(true)
-        await axios.put(`http://localhost:5000/user/${userId}/resetPassword/${token}`, {
+        await axios.put(`/user/${userId}/resetPassword/${token}`, {
             password: newPassword
         }).then((res) => {
             toast.success('Password reset successfully!', {
@@ -60,14 +59,9 @@ const ResetPassword = () => {
                 theme: "light",
               });
 
-            // setLoading(false)
             setValidReset(true)
             formik.resetForm();
-            console.log(res.data)
-
         }).catch((err) => {
-            // setLoading(false)
-
             setValidReset(false)
             console.log(err.message)
         })
@@ -75,7 +69,9 @@ const ResetPassword = () => {
 
     const validationSchema = Yup.object().shape({
         newPassword: Yup.string()
-          .required('password is required'),
+          .required('password is required')
+          .min(6, 'password must contain at least 6 characters')
+          .max(50, 'password is too long!')
       });
       
       let initialValues = {
@@ -100,15 +96,15 @@ const ResetPassword = () => {
     <ResetContainer>
             {!buttonPressed && validReset ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 30, alignItems: 'center'}}>
-                        <img src={require('../ticked.png')} width='350px' alt='ticked'/>
+                        <img src={require('../images/ticked.png')} width='350px' alt='ticked'/>
     
-                        <Card style={{ backgroundColor: 'rgba(0, 0, 0, 0.032)', padding: '60px', height: '200px'}}>
+                        <Card style={{ backgroundColor: 'rgba(0, 0, 0, 0.032)', padding: '60px', height: '300px'}}>
                             <Typography variant="h5" style={{color: '#5B42F3', fontWeight: '700', fontFamily: 'Poppins', marginBottom: 20}}>Reset your password</Typography>
                             <form 
                                 style={{ textAlign: 'center', display: 'flex', flexDirection: "column", alignItems: "center", gap: 20}}
                                 onSubmit={formik.handleSubmit}
                             > 
-                                <TextField id="newPassword" name='newPassword' label="newPassword" variant="standard" 
+                                <TextField id="newPassword" name='newPassword' label="New password" variant="standard" 
                                     type={passwordVisibility} 
                                     value={formik.values.newPassword} 
                                     onChange={formik.handleChange}

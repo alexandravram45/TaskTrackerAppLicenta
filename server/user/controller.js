@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const BlackList = require('./Blacklist')
 const nodemailer = require('nodemailer')
 const crypto = require("crypto");
-
 const User = require("./user.model");
 const Board = require("../boards/board.model");
 const Task = require("../tasks/task.model")
@@ -78,6 +77,7 @@ const register = async (req, res, next) => {
       password, 
       color: getRandomColor() 
     });
+    
     const existingUser = await User.findOne({ email });
     if (existingUser)
         return res.status(400).json({
@@ -130,7 +130,7 @@ const register = async (req, res, next) => {
         Column.findByIdAndUpdate(column._id, { boardId: defaultBoard._id })
     ));
 
-    const token = generateConfirmationToken(user._id)
+    const token = user.generateAccessJWT()
     console.log(token)
 
     await sendConfirmationEmail(user.email, token, user._id)
@@ -190,6 +190,7 @@ const login = async (req, res, next) => {
       lastName: user.lastName,
       email: user.email,
       token: user.token,
+      color: user.color,
     };
 
     res.status(201).json({
@@ -254,11 +255,9 @@ const logout = async (req, res, next) => {
   res.end();
 }
 
-const generateConfirmationToken = (userId) => {
-  return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '1h' });
-};
-
 const sendConfirmationEmail = async (email, token, userId) => {
+  const user = await User.findById(userId)
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     host: "smtp.gmail.com",
@@ -266,18 +265,27 @@ const sendConfirmationEmail = async (email, token, userId) => {
     secure: true,
     auth: {
       user: "ticked.noreply@gmail.com",
-      pass: "dsguyzuhbpzoepcy"
+      pass: process.env.APP_PASS
     },
   });
   
   const mailOptions = {
-    from: "a.avram54@gmail.com",
+    from: "ticked.noreply@gmail.com",
     to: email,
     subject: 'Ticked email confirmation',
-    html: `<h1>Hello</h1>
-          <div><p>Click the link below to confirm your email: </p>
-          <a href="${process.env.CLIENT_URL}/user/${userId}/verify/${token}">${process.env.CLIENT_URL}/user/${userId}/verify/${token}<a>
-          </div>`
+    html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+      <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;">
+        <h2 style="text-align: center; color: #333;">We're glad you're here, ${user.firstName} ${user.lastName}!</h2>
+        <p style="text-align: center;">We just want to confirm it's you.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.CLIENT_URL}/user/${userId}/verify/${token}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: white; background-color: #007BFF; border-radius: 5px; text-decoration: none;">Click to confirm your email address</a>
+        </div>
+        <p style="text-align: center;">If you didn't create a Ticked account, just delete this email.</p>
+        <p style="text-align: center;">Cheers,<br/>The Ticked team.</p>
+      </div>
+    </div>
+  `
   }
 
   transporter.sendMail(mailOptions, (err, info) => {
@@ -312,7 +320,7 @@ const confirmEmail = async (req, res) => {
     await User.findByIdAndUpdate(userId, { verified: true });
 
     await user.save();
-    res.status(200).json({ message: 'Email verified successfully' }); // Returnează un răspuns JSON către client
+    res.status(200).json({ message: 'Email verified successfully' });
 
   } catch (error) {
     console.error(error);
@@ -328,6 +336,8 @@ const sendInvitationLink = async (req, res) => {
   let boardId = req.params.boardId;
   let userId = req.params.userId;
 
+  const user = await User.findById(userId)
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     host: "smtp.gmail.com",
@@ -335,7 +345,7 @@ const sendInvitationLink = async (req, res) => {
     secure: true,
     auth: {
       user: "ticked.noreply@gmail.com",
-      pass: "dsguyzuhbpzoepcy",
+      pass: process.env.APP_PASS
     },
   });
   
@@ -343,12 +353,19 @@ const sendInvitationLink = async (req, res) => {
     from: invitedBy,
     to: email,
     subject: `${invitedBy} invited you to a Ticked Board`,
-    html: `<h1>Hello!</h1>
-          <div>
-            <p>${invitedBy} invited you to a Ticked Board</p>
-            <p>Join them on Ticked to collaborate, manage projects, and reach new productivity peaks.</p>
-            <a href="${process.env.CLIENT_URL}/board/${boardId}/join/${userId}">Go to board<a>
-          </div>`
+    html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+      <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;">
+        <h2 style="text-align: center; color: #333;">Hello, ${user.firstName} ${user.lastName}!</h2>
+        <p style="text-align: center;">${invitedBy} invited you to a Ticked Board</p>
+        <p style="text-align: center;">Join them on Ticked to collaborate, manage projects, and reach new productivity peaks.</</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.CLIENT_URL}/board/${boardId}/join/${userId}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: white; background-color: #007BFF; border-radius: 5px; text-decoration: none;">Go to board</a>
+        </div>
+        <p style="text-align: center;">Cheers,<br/>The Ticked team.</p>
+      </div>
+    </div>
+  `
   }
 
   try{
@@ -375,8 +392,9 @@ const sendResetPasswordEmail = async (req, res) => {
     await token.deleteOne()
   };
 
+  const user = await User.findById(userId)
+
   let resetToken = crypto.randomBytes(32).toString("hex");
-  // const hash = await bcrypt.hash(resetToken, Number(10));
 
   await new Token({
     userId: userId,
@@ -391,7 +409,7 @@ const sendResetPasswordEmail = async (req, res) => {
     secure: true,
     auth: {
       user: "ticked.noreply@gmail.com",
-      pass: "dsguyzuhbpzoepcy",
+      pass: process.env.APP_PASS
     },
   });
   
@@ -399,11 +417,18 @@ const sendResetPasswordEmail = async (req, res) => {
     from: 'ticked.noreply@gmail.com',
     to: email,
     subject: `Reset your password`,
-    html: `<h1>Hello!</h1>
-          <div>
-            <p>Click the link below to reset your Ticked account password.</p>
-            <a href="${process.env.CLIENT_URL}/resetPassword/${resetToken}">Reset password<a>
-          </div>`
+    html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+      <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;">
+        <h2 style="text-align: center; color: #333;">Hello, ${user.firstName} ${user.lastName}!</h2>
+        <p style="text-align: center;">If you've lost your password or wish to reset it, use the link below to get started.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.CLIENT_URL}/resetPassword/${resetToken}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: white; background-color: #007BFF; border-radius: 5px; text-decoration: none;">Reset password</a>
+        </div>
+        <p style="text-align: center;">Cheers,<br/>The Ticked team.</p>
+      </div>
+    </div>
+  `
   }
 
   try{
@@ -421,8 +446,6 @@ const sendResetPasswordEmail = async (req, res) => {
 }
 
 const resetPassword = async (req, res) => {
-  // console.log(req.params.id, )
-  // const userId = req.params.id;
   const newPassword = req.body.password;
   const token = req.params.token
 
@@ -440,14 +463,6 @@ const resetPassword = async (req, res) => {
   if (!user) {
     res.status(400).json({message: 'User not found'});
   }
-    
-  // const isValid = await bcrypt.compare(token, tokenObj.token);
-  // if (!isValid) {
-  //   console.log(token)
-  //   console.log(tokenObj.token)
-
-  //   res.status(400).json({message: 'Invalid or expired password reset token'});
-  // }
 
   const hash = await bcrypt.hash(newPassword, Number(10));
   await User.updateOne(
@@ -466,6 +481,10 @@ const sendAssignNotification = async (req, res) => {
   let taskTitle = req.body.taskTitle;
 
   let boardId = req.params.boardId;
+  let userId = req.params.userId;
+
+  const user = await User.findById(userId)
+
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -474,7 +493,7 @@ const sendAssignNotification = async (req, res) => {
     secure: true,
     auth: {
       user: "ticked.noreply@gmail.com",
-      pass: "dsguyzuhbpzoepcy",
+      pass: process.env.APP_PASS
     },
   });
   
@@ -482,11 +501,18 @@ const sendAssignNotification = async (req, res) => {
     from: 'ticked.noreply@gmail.com',
     to: email,
     subject: `You have been assigned a new task`,
-    html: `<h1>Hello!</h1>
-          <div>
-            <p>You have been assigned a new task with title: <b>${taskTitle}</b>, in board <i>${boardTitle}</i></p>
-            <a href="${process.env.CLIENT_URL}/boards/${boardId}">Go to board<a>
-          </div>`
+    html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+            <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;">
+              <h2 style="text-align: center; color: #333;">Hello, ${user.firstName} ${user.lastName}!</h2>
+              <p>You have been assigned a new task with title: <b>${taskTitle}</b>, in board <i>${boardTitle}</i></p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.CLIENT_URL}/boards/${boardId}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: white; background-color: #007BFF; border-radius: 5px; text-decoration: none;">Go to board</a>
+              </div>
+              <p style="text-align: center;">Cheers,<br/>The Ticked team.</p>
+            </div>
+          </div>
+        `
   }
 
   try{
@@ -503,6 +529,49 @@ const sendAssignNotification = async (req, res) => {
 
 }
 
+const getTitleAndPointsTillNext = (points) => {
+  if (points <= 50) {
+    return { title: 'Novice', pointsTillNext: 50 - points };
+  } else if (points <= 100) {
+    return { title: 'Explorer', pointsTillNext: 100 - points };
+  } else if (points <= 200) {
+    return { title: 'Challenger', pointsTillNext: 200 - points };
+  } else {
+    return { title: 'Wizard', pointsTillNext: 0 };
+  }
+};
+
+const getUserPoints = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const totalPointsResult = await Task.aggregate([
+      {
+        $match: {
+          assignee: new mongoose.Types.ObjectId(userId),
+          done: true,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPoints: { $sum: '$points' },
+        },
+      },
+    ]);
+
+    const totalPoints = totalPointsResult[0] ? totalPointsResult[0].totalPoints : 0;
+    const { title, pointsTillNext } = getTitleAndPointsTillNext(totalPoints);
+    
+    res.status(200).json({ totalPoints, title, pointsTillNext });
+  } catch (error) {
+    console.error('Error calculating points:', error);
+    res.status(500).json({ error: 'An error occurred while calculating points.' });
+  }
+};
+
+
+
 module.exports = { 
   getUserById, 
   login, 
@@ -514,5 +583,6 @@ module.exports = {
   resetPassword, 
   sendResetPasswordEmail,
   getUserByEmail,
+  getUserPoints,
 }
   

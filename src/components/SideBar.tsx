@@ -1,7 +1,5 @@
 import { Box, Button, Card, Drawer, IconButton, Menu, TextField, Typography, styled, useMediaQuery } from '@mui/material'
 import HomeIcon from '@mui/icons-material/Home';
-import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import './styles.css'
 import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
@@ -21,7 +19,7 @@ import { User } from '../App';
 import Star from '@mui/icons-material/Star';
 
 interface SideBarProps {
-    user: User;
+    user: User | null,
     onBoardSelect: (board: Board) => void;
 }
 
@@ -40,24 +38,29 @@ const MobileMenuButton: React.FC<MobileMenuButtonProps> = ({ onOpen }) => {
   };
 
 const SideContainer = styled(Card)`
-    width: 240px; // Lățime fixă pentru container
+    width: 240px; 
     min-width: 240px;    
     background-color: rgb(255 255 255 / 16%);
     flex: 1;
     float: left;
-    margin-top: 61px;
+    margin-top: 77px;
     border-right: 0.5px solid #ffffff73;
 `;
 
 const ListButton = styled(Button)`
     width: 100%;
     border-radius: 10px;
-
-
+    display: flex;
+    padding: 10px;
+    justify-content: left;
+    align-items: center;
+    text-transform: none;
+    color: #000000;
 `;
 
 const StyledLink = styled(Link)`
   text-decoration: none;
+  text-align: left;
   color: inherit;
   transition: background-color 0.3s;
   border-radius: 10px;
@@ -68,11 +71,8 @@ const StyledLink = styled(Link)`
 `;
 
 export const CreateButton = styled(Button)`
-    /* color: #000000; */
     width: 100%;
-    /* background-color: #091e420f; */
     text-decoration: none;
-
     &:hover {
         background-color: #091e421f;
 
@@ -100,10 +100,9 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const isMobile = useMediaQuery('(max-width:800px)');
 
-
     useEffect(() => {
         getAllBoards();
-    }, [user.id, location.pathname, selectedBoard?.name, boards?.length, selectedBoard?.favorite]); //mai era boards aici nuj dc
+    }, [user?.id, location.pathname, selectedBoard?.name, boards?.length, selectedBoard?.favorite]);
 
     const handleOpenNewBoard = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorBoard(event.currentTarget);
@@ -123,7 +122,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
 
     const addNewBoard = async (title: String, color: String) => {
         
-            await axios.post('http://localhost:5000/board', {
+            await axios.post('/board', {
                 user: user,
                 name: title,
                 columns: [],
@@ -140,8 +139,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                     theme: "light",
                   });
 
-                console.log(response.data)
-                getAllBoards(); // Fetch boards again to update the list
+                getAllBoards(); 
             }).catch((err) => {
                 console.log(err)
             })
@@ -149,8 +147,9 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
     
     const getAllBoards = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/board?userId=${user.id}`);
-            console.log("fetched boards: ", response.data);
+            const response = await axios.get(`/board?userId=${user?.id}`, {
+                withCredentials: true
+            });
             dispatch(setBoards(response.data));
         } catch (error) {
             console.error('Error fetching boards:', error);
@@ -196,7 +195,6 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
         }
       })
 
-
   return (
     <>
         {isMobile ? (
@@ -207,16 +205,16 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                     open={isDrawerOpen}
                     onClose={handleCloseDrawer}
                     ModalProps={{ keepMounted: true }}
-                    PaperProps={{ sx: { backgroundColor: 'rgba(230, 230, 230, 0.882)' } }} // Setarea culorii transparente pentru drawer
+                    PaperProps={{ sx: { backgroundColor: 'rgba(230, 230, 230, 0.882)' } }}
                     >
                     <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: 5, marginTop: '100px'}}>
-                        <StyledLink to={'/boards'} >
+                        <StyledLink to={'/home/boards'} >
                             <ListButton id='button-wrapper' >
                                 <HomeIcon />
                                 <Typography ml='8px'>Boards</Typography>
                             </ListButton>
                         </StyledLink>
-                        <StyledLink to={'/boards/progress'} >
+                        <StyledLink to={'/home/boards/progress'} >
                             <ListButton id='button-wrapper' >
                                 <AutoAwesomeIcon />
                                 <Typography ml='8px'>Your progress</Typography>
@@ -246,13 +244,13 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                     open={Boolean(anchorBoard)}
                                     onClose={handleCloseNewBoard}
                                 >    
-                                    <Box sx={{ width: '266px', height: 'auto', padding: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box sx={{ width: '266px', height: 'auto', padding: 4, display: 'flex', flexDirection: 'column', gap: 2,  }}>
                                         <Button onClick={handleCloseNewBoard} style={{alignSelf: 'flex-end' , color: 'black', marginRight: '-10px', marginTop: '-10px'}}>
                                             <Close style={{ fontSize: '16px' }}/>
                                         </Button>
                                         <Typography style={{alignSelf: 'center'}} variant='body2'>Create board</Typography>
                                         <form 
-                                            style={{ display: 'flex', flexDirection: "column", gap: '20px'}}
+                                            style={{ display: 'flex', flexDirection: "column", gap: '20px' }}
             
                                             onSubmit={formik.handleSubmit}
                                         >  
@@ -268,7 +266,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                             helperText={formik.touched.title && formik.errors.title}
                                         />
                                         <Typography variant='body2'>Choose background</Typography>
-                                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap',}}>
+                                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center'}}>
                                         {
                                             backgroundColors.map((color, index) => {
                                                 return <ColorButton 
@@ -293,7 +291,7 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                             </Box>
                         </div>
                             {boards && boards?.map((board: Board) => (
-                                <StyledLink to={`/boards/${board._id}`} >
+                                <StyledLink to={`/home/boards/${board._id}`} >
                                     <ListButton id='button-wrapper' key={board._id} onClick={() => handleBoardSelect(board)} style={{ backgroundColor: setBackgroundColor(board._id)}} >
                                         <Typography>
                                                 {board.name}
@@ -309,11 +307,6 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
         ) : (
             <SideContainer>
             <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: 5, marginTop: '70px',}}>
-                {/* <div style={{ borderRadius: '50%', marginLeft: '46px', width: '100px', height: '100px', backgroundColor: 'rgba(255, 255, 255, 0.281)', position: 'relative', padding: 4, margin: 4, textAlign: 'center'}}>
-                    <img src={require('../streak.png')} width='60px' alt='ticked' style={{  marginTop: '4px' }} />
-                    <Typography style={{ top: '66px', left: '48px', position: 'absolute'}} variant='h5'>2</Typography>
-
-                </div> */}
                 <StyledLink to={'boards'} >
                     <ListButton id='button-wrapper' >
                         <HomeIcon />
@@ -403,9 +396,9 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                     </Box>
                 </div>
                     {boards && boards?.map((board: Board) => (
-                        <StyledLink to={`/boards/${board._id}`} >
+                        <StyledLink to={`/home/boards/${board._id}`} >
                             <ListButton id='button-wrapper' key={board._id} onClick={() => handleBoardSelect(board)} style={{ backgroundColor: setBackgroundColor(board._id)}} >
-                                <Typography>
+                                <Typography sx={{textAlign: 'left'}}>
                                         {board.name}
                                 </Typography>
                                 {

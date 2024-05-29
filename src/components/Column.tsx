@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import Task from './Task';
 import { Box, Button, ButtonGroup, Card, Divider, IconButton, Input, Menu, Typography } from '@mui/material';
@@ -9,15 +9,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Board } from './Home';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppState, setSelectedBoardRedux } from '../store';
+import { useDispatch } from 'react-redux';
+import { setSelectedBoardRedux } from '../store';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { User } from '../App';
 import Close from '@mui/icons-material/Close';
 import { TaskInterface } from './Home';
 import CheckCircle from '@mui/icons-material/CheckCircle';
-import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
-
 
 interface TaskListProps {
   isdraggingover: boolean;
@@ -33,6 +31,7 @@ interface ColumnProps {
     selectedBoard: Board | null;
     members: User[];
     done: Boolean;
+    setSelectedBoard: (board: Board | null) => void;
   }
 
 
@@ -47,9 +46,8 @@ const ColumnCard = styled(Card)`
   transition-duration: 0.3s;
   position: relative;
   float: left;
-  background-color: #ebecf0 ;
+  background-color: #f8f8f897 !important;
   color: #172b4d !important;
-  background-color: ${props => props.theme.palette === 'dark' ? 'black' : '#ebecf0'}; // Setează culoarea textului în funcție de tema selectată
 `;
 
 const AddNewCardButton = styled(Button)`
@@ -59,12 +57,13 @@ const AddNewCardButton = styled(Button)`
     border-radius: 16px;
     display: flex;
     color: #172b4d; 
-    padding: 8px;
+    padding: 10px;
+    margin-left: 8px;
     transition: background-color 0.3s;
     align-items: center;  
 
     &:hover {
-      background-color: #ddd;
+      background-color: rgba(255, 255, 255, 0.474);
     }
 
     &:active {
@@ -87,22 +86,7 @@ const TaskList = styled.div<TaskListProps>`
   flex-grow: 1;
   position: relative;
   max-height: 60vh;
-  overflow-y: auto; /* Add this line to make the column scrollable */
-
-/* 
-  &:before {
-    content: '';
-    position: absolute;
-    height: 50px;
-    width: 282px;
-    border-radius: 10px;
-    background-color: #40404019;
-    display: ${(props) => (props.isdraggingover ? 'block' : 'none')};
-    top: ${(props) => props.draggingOverIndex * 60 + "px"}; 
-
-    z-index: 1;
-  }
-   */
+  overflow-y: auto; 
 `;
 
 const ListItem = styled.div`
@@ -125,8 +109,6 @@ const DueDateButton = styled.button`
   }
 `;
 
-
-
 const TaskCard = styled(Card)`
   border: 1px solid lightgray;
   padding: 8px;
@@ -144,14 +126,10 @@ const Column: React.FC<ColumnProps> = (props) => {
   const [addButtonStyle, setAddButtonStyle] = useState({display: 'flex'})
   const [cardTitle, setCardTitle] = useState("")
   const dispatch = useDispatch();
-  const selectedBoardRedux = useSelector((state: AppState) => state.selectedBoard);
-  const [open, setOpen] = useState(false);
   const [areYouSureButton, setAreYouSureButton] = useState(false);
   const [anchorColumn, setAnchorColumn] = useState<null | HTMLElement>(null);
-  const [tasks, setTasks] = useState<TaskInterface[]>([])
+  const [tasks, setTasks] = useState<TaskInterface[]>(props.tasks)
   const [column, setColumn] = useState(props.column)
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-
 
   const addNewCard = async (event: React.MouseEvent<HTMLElement>) => {
     setNewCardStyle({display: 'block'})
@@ -160,55 +138,102 @@ const Column: React.FC<ColumnProps> = (props) => {
   
   const fetchTaskById = async (taskId: string) => {
     try{
-      const res = await axios.get(`http://localhost:5000/tasks/get-by-id/${taskId}`);
+      const res = await axios.get(`/tasks/get-by-id/${taskId}`);
       console.log(res.data.data)
+      return res.data.data;
     } catch (err) {
       console.log("Error fetching task: ", err)
     }
   }
 
   const updateDoneFieldColumn = async (columnId: string, done: Boolean) => {
-    await axios.put(`http://localhost:5000/column/${columnId}`, {
+    await axios.put(`/column/${columnId}`, {
       done
     }).then((res) => {
-      console.log(res.data)
+      let cols = props.selectedBoard?.columns.map((col:any) => {
+        if (col._id === columnId){
+          return {...col, done: done}
+        } else {
+          return col
+        }
+      })
+
+      let b: Board = {...props.selectedBoard!, columns: cols || []}
+
+      props.setSelectedBoard(b)
+
       getColumn()
     }).catch((err) => {
       console.log(err)
     })  
   }
-
   const updateColumn = async (columnId: string, taskIds: string | Array<TaskInterface>) => {
-    await axios.put(`http://localhost:5000/column/${columnId}`, {
+    await axios.put(`/column/${columnId}`, {
       taskIds
     }).then((res) => {
-      console.log(res.data)
       let updatedTasks = res.data.data.tasks;
-      console.log(updatedTasks)
       fetchTaskById(updatedTasks[updatedTasks.length - 1])
+      dispatch(setSelectedBoardRedux(props.selectedBoard))
     }).catch((err) => {
       console.log(err)
     })  
   }
 
-  const updateBoard = async (columnId: string, taskIds: string) => {
+  const updateBoardAfterSort = async (columnId: string, taskdIds: Array<TaskInterface>) => {
+    const boardId = props.selectedBoard?._id
 
-    const getBoardId = await axios.get(`http://localhost:5000/column/get-by-id/${columnId}`);
-    const boardId = getBoardId.data.data.boardId;
-    const taskss = getBoardId.data.data.tasks;
-    console.log(taskss)
+    const getBoard = await axios.get(`/board/${boardId}`);
+    const columns = props.selectedBoard?.columns.map((col) => {
+      if (col._id === columnId){
+        return {
+          ...col,
+          tasks: taskdIds
+        } 
+      } else {
+        return col;
+      }
+    })
 
-    const getBoard = await axios.get(`http://localhost:5000/board/${boardId}`);
+    props.setSelectedBoard({
+      ...props.selectedBoard!,
+      columns: columns || []
+    })
+  }
+
+  const updateBoard = async (columnId: string, taskIds: string) => { 
+
+    const boardId = props.selectedBoard?._id
+    const getBoard = await axios.get(`/board/${boardId}`);
     const board = getBoard.data;
-    
-    const updatedTasks = [...board.tasks, taskIds]; // Assuming taskIds is an array of taskIds
 
-    await axios.put(`http://localhost:5000/board/${boardId}`, {
+    const taskObj = await fetchTaskById(taskIds);
+    
+    const updatedTasks = [...board.tasks, taskIds];
+
+    const updatedTasks2 = props.selectedBoard?.tasks.concat(taskObj)
+
+    const updatedColumns = props.selectedBoard?.columns.map((col: any) => {
+      if (col._id === columnId) {
+        return {
+          ...col,
+          tasks: [...col.tasks, taskObj]
+        };
+      }
+      return col;
+    });
+    
+    props.setSelectedBoard({
+      ...props.selectedBoard!,
+      columns: updatedColumns || [],
+      tasks: updatedTasks2 || []
+    });
+    
+    await axios.put(`/board/${boardId}`, {
       tasks: updatedTasks,
       columns: board.columns
     }).then((res) => {
+
       dispatch(setSelectedBoardRedux(res.data.data))
-      console.log(res.data.data)
       }).catch((err) => {
       console.log(err)
     })  
@@ -217,14 +242,6 @@ const Column: React.FC<ColumnProps> = (props) => {
   const handleAreYouSureButton = () => {
     setAreYouSureButton(true)
   }
-
-  const handleOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
 
   const handleOpenColumnDetails = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorColumn(event.currentTarget);
@@ -239,25 +256,20 @@ const handleCloseColumnDetails = () => {
 
     if (cardTitle !== ""){
       
-      await axios.post('http://localhost:5000/tasks', {
+      await axios.post('/tasks', {
         title: cardTitle,
         columnId: props.column._id
       })
         .then( async (response) => {
+          
+          setCardTitle("");
+          setAddButtonStyle({display: 'flex'});
+          setNewCardStyle({display: 'none '})
+
           await Promise.all([
             updateColumn(props.column._id, response.data.data._id),
             updateBoard(props.column._id, response.data.data._id)
           ]) 
-          // setTasks(prevTasks => [...prevTasks, response.data.data]);
-          console.log(props.tasks)
-          props.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null, done: null})
-          props.selectedBoard?.tasks.push({title: response.data.data.title, _id: response.data.data._id, description: '', dueDate: null, points: null, assignee: null, done: null})
-
-          setCardTitle("");
-          //setTasks((prev) => [...prev, response.data.data])
-
-          setAddButtonStyle({display: 'flex'});
-          setNewCardStyle({display: 'none '})
         })
         .catch((error) => {
           console.log(error.message)
@@ -284,20 +296,28 @@ const handleCloseColumnDetails = () => {
   }
 
   const sortByDueDate = () => {
-    props.tasks.sort((a, b) => {
+    const sortedTasks = [...props.tasks].sort((a, b) => {
       if (a.dueDate && b.dueDate) {
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       }
+  
+      if (!a.dueDate && b.dueDate) {
+        return 1;
+      }
+  
+      if (a.dueDate && !b.dueDate) {
+        return -1;
+      }
+  
       return 0;
     });
-    // Actualizează state-ul pentru a reflecta noua ordine a taskurilor
-    setTasks([...props.tasks]);
-    updateColumn(props.column._id, tasks)
-
+    setTasks(sortedTasks);
+    updateColumn(props.column._id, sortedTasks);
+    updateBoardAfterSort(props.column._id, sortedTasks)
   };
-
-  const sortByTitle= () => {
-    props.tasks.sort((a, b) => {
+  
+  const sortByTitle = () => {
+    const sortedTasks = [...props.tasks].sort((a, b) => {
       const titleA = a.title.toLowerCase();
       const titleB = b.title.toLowerCase();
       if (titleA < titleB) {
@@ -308,37 +328,37 @@ const handleCloseColumnDetails = () => {
       }
       return 0;
     });
-    // Actualizează state-ul pentru a reflecta noua ordine a taskurilor
-    setTasks([...props.tasks]);
-    updateColumn(props.column._id, tasks)
+    setTasks(sortedTasks);
+    updateColumn(props.column._id, sortedTasks);
+    updateBoardAfterSort(props.column._id, sortedTasks)
+
   };
   
-
   const sortByStoryPoints = () => {
-    props.tasks.sort((a, b) => {
-      // Verificăm dacă taskurile au story points asignate
-      if (a.points === null && b.points === null) {
+    const sortedTasks = [...props.tasks].sort((a, b) => {
+      
+      if ((a.points === null || a.points === undefined) && (b.points === null || b.points === undefined)) {
         return 0;
       }
-      // Taskurile fără puncte de poveste sunt plasate la sfârșit
-      if (a.points === null) {
+      if (a.points === null || a.points === undefined) {
         return 1;
       }
-      if (b.points === null) {
+      if (b.points === null || b.points === undefined) {
         return -1;
       }
-      // Comparăm story points-urile numerice
       return b.points - a.points;
-    });
-    // Actualizează state-ul pentru a reflecta noua ordine a taskurilor
-    setTasks([...props.tasks]);
-    updateColumn(props.column._id, tasks)
-  };
+     
 
+    });
+    setTasks(sortedTasks);
+    updateColumn(props.column._id, sortedTasks);
+    updateBoardAfterSort(props.column._id, sortedTasks)
+  };
+  
   const makeColumnDONE = () => {
     updateDoneFieldColumn(props.column._id, true)
     props.tasks.map(async (task) => {
-      await axios.put(`http://localhost:5000/tasks/${task._id}`, {
+      await axios.put(`/tasks/${task._id}`, {
         done: true
       }).then((res) => {
         setTasks((prev) => [...prev, res.data.data]);
@@ -351,7 +371,7 @@ const handleCloseColumnDetails = () => {
 
   const getColumn = () => {
     const id = props.column._id
-    axios.get(`http://localhost:5000/column/get-by-id/${id}`).then((res) => {
+    axios.get(`/column/get-by-id/${id}`).then((res) => {
       dispatch(setSelectedBoardRedux(props.selectedBoard))
     })
   }
@@ -363,7 +383,7 @@ const handleCloseColumnDetails = () => {
   
   const handleDeleteColumn = async () => {
     const boardId = props.selectedBoard?._id;
-    await axios.delete(`http://localhost:5000/column/${column._id}/${boardId}`)
+    await axios.delete(`/column/${column._id}/${boardId}`)
       .then((res) => {
         toast.success('Column deleted successfully!', {
           position: "bottom-right",
@@ -376,7 +396,14 @@ const handleCloseColumnDetails = () => {
           theme: "light",
         });
         const id = res.data.data._id;
-        console.log(res.data.data._id)
+
+        const updatedColumns = props.selectedBoard?.columns.filter(col => col._id !== id);
+
+        props.setSelectedBoard({
+          ...props.selectedBoard!,
+          columns: updatedColumns || []
+        });
+  
   
         dispatch(setSelectedBoardRedux(props.selectedBoard))
         handleAreYouSureButtonClose();
@@ -455,7 +482,7 @@ const handleCloseColumnDetails = () => {
                       <DueDateButton onClick={makeColumnDONE}>
                         <div  style={{display: 'flex', gap: 4, alignItems: 'center'}}>
                         <CheckCircle style={{color: 'green'}}/>
-                        <span>Make it a DONE column</span>
+                        <span>Mark column as DONE</span>
                         </div>
                       </DueDateButton>
                   </ListItem>   
@@ -464,9 +491,6 @@ const handleCloseColumnDetails = () => {
                 ) : null}
                              
                 <Divider />
-                <ListItem>
-                  <DueDateButton>Archive</DueDateButton>
-                </ListItem>
                 <ListItem>
                   <DueDateButton onClick={handleAreYouSureButton}>Delete</DueDateButton>
                 </ListItem> 
@@ -503,6 +527,7 @@ const handleCloseColumnDetails = () => {
                   task={task} 
                   index={index} 
                   selectedBoard={props.selectedBoard}
+                  setSelectedBoard={props.setSelectedBoard}
                   done={props.done}
                 />
               ))}
@@ -528,20 +553,16 @@ const handleCloseColumnDetails = () => {
             </TaskList>
           )}
         </Droppable>
+        
         {!props.done ? (
           <AddNewCardButton onClick={addNewCard} style={addButtonStyle}>
             <AddIcon />
             <span>Add a card</span>
           </AddNewCardButton>
         ) : null}
-        
-        
-      
       </ColumnCard>
       )}
-
     </Draggable>
-
   );
 };
 

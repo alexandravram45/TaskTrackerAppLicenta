@@ -4,22 +4,18 @@ const Blacklist = require('../user/Blacklist');
 
 exports.authenticate = async (req, res, next) => {
   const authHeader = req.headers.cookie;
-
   if (!authHeader) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
   const cookiesArray = authHeader.split(';').map(cookie => cookie.trim());
 
-  // Find the cookie with name 'SessionID'
   const accessTokenCookie = cookiesArray.find(cookie => cookie.startsWith('SessionID='));
-
   if (!accessTokenCookie) {
-    return res.status(401).json({ message: 'Invalid cookie format' });
+    return res.status(401).json({ message: 'Invalid cookie format or session expired.' });
   }
-
-  // Extract the token from the cookie
   const accessToken = accessTokenCookie.split('=')[1];
+  console.log("cookie token:  " + accessToken)
 
   const checkIfBlacklisted = await Blacklist.findOne({ token: accessToken });
 
@@ -38,7 +34,6 @@ exports.authenticate = async (req, res, next) => {
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
       }
-  
       req.user = user;
       next();      
 

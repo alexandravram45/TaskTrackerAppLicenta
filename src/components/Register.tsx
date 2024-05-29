@@ -16,7 +16,8 @@ import AlternateEmailRoundedIcon from '@mui/icons-material/AlternateEmailRounded
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
 interface RegisterProps {
-    handleToggle: () => void
+    handleToggle: () => void,
+    landingEmail: string
 }
 
 const RegisterContainer = styled.div`
@@ -26,7 +27,6 @@ const RegisterContainer = styled.div`
     align-items: center;
     gap: 20px;
 `;
-
 
 const validationSchema = Yup.object().shape({
     email: Yup.string()
@@ -51,13 +51,14 @@ const validationSchema = Yup.object().shape({
   });
   
 
-const Register:React.FC<RegisterProps> = ({ handleToggle }) => {
+const Register:React.FC<RegisterProps> = ({ handleToggle, landingEmail }) => {
     const [error, setError] = useState("")
     const dispatch = useDispatch();
+    const [passwordVisibility, setPasswordVisibility] = useState('password')
 
     const formik = useFormik({
         initialValues: {
-        email: '',
+        email: '' || landingEmail,
         password: '',
         username: '',
         firstName: '',
@@ -71,7 +72,7 @@ const Register:React.FC<RegisterProps> = ({ handleToggle }) => {
 
 
     const handleRegister = async (email: String, username: String, firstName: string, lastName: string, password: String)  => {
-        await axios.post('http://localhost:5000/user/register', {
+        await axios.post('/user/register', {
         username,
         email,
         firstName,
@@ -99,12 +100,6 @@ const Register:React.FC<RegisterProps> = ({ handleToggle }) => {
             setError(error.response?.data.message)
         })
     };
-
-    const resendEmail = () => {
-
-    }
-
-    const [passwordVisibility, setPasswordVisibility] = useState('password')
 
     const handlePasswordVisibility = () => {
         passwordVisibility === 'text' ? setPasswordVisibility('password') : setPasswordVisibility('text')
@@ -206,7 +201,6 @@ const Register:React.FC<RegisterProps> = ({ handleToggle }) => {
                 <Typography variant='h5'>Thank you for registering!</Typography>
                 <CheckCircleIcon  style={{ color: '#5B42F3' }}/>
                 <Typography variant='body2'>To complete the registration process, please verify your email address by clicking the link we've sent to your inbox.</Typography>
-                <Button onClick={resendEmail} variant='text' style={{textTransform: 'none'}}>resend email</Button>
             </>
         )}
         

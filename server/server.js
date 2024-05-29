@@ -5,7 +5,7 @@ const { authenticate } = require('./middleware/auth.js');
 const cors = require("cors");
 const cookieParser = require('cookie-parser');
 const mongoose = require("mongoose");
-const { confirmEmail } = require('./user/controller.js')
+const path = require('path');
 
 const taskRoutes = require('./tasks/route');
 const userRoutes = require('./user/route');
@@ -15,14 +15,12 @@ const commentRoutes = require('./comments/route.js');
 const tokenRoutes = require('./token/route.js');
 
 app.use(cors({
-    origin: 'http://localhost:3000',  // Replace with the actual origin of your client application
+    origin: process.env.CLIENT_URL,
     credentials: true,
   }));
 
 app.use(cookieParser());
 app.use(express.json());
-
-app.use(cookieParser());
 
 const db = process.env.DB_URI
 const port = process.env.PORT
@@ -35,30 +33,22 @@ mongoose.connect(db)
         console.error('Error connecting to MongoDB:', error);
     });
 
-
-app.use('/tasks', taskRoutes)
 app.use('/user', userRoutes)
+app.use('/tasks', taskRoutes)
 app.use('/board', boardRoutes)
 app.use('/column', columnroutes)
 app.use('/token', tokenRoutes)
 app.use('/comment', commentRoutes)
-
 app.get('/profile', authenticate, (req, res) => {
-    console.log(req.user)
-    res.status(200).json({ 
+    res.json({ 
         message: `Welcome ${req.user.username}`,
-        user: req.user
+        user: req.user,
+        username: req.user.username
     });
-  });
+})
 
-// app.get('users/:id/verify/:token', confirmEmail, (req, res) => {
-//     res.json({
-//       message: "Email verified",
-//       token: req.params.token,
-//       id: req.params.id
-//     })
-//   })
-  
+app.use('/images', express.static(path.join(__dirname, '../src/images')));  
+
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });

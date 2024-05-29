@@ -1,15 +1,16 @@
 const express = require('express');
 const columnController = require('./controller');
+const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 
-router.get('/', columnController.getColumnsByBoardId)
+router.get('/', authenticate, columnController.getColumnsByBoardId)
 
-router.get('/get-by-id/:id', columnController.getColumnById)
+router.get('/get-by-id/:id', authenticate, columnController.getColumnById)
 
-router.put('/:id', columnController.updateColumn)
+router.put('/:id', authenticate, columnController.updateColumn)
 
-router.post('/', columnController.createColumn)
+router.post('/', authenticate, columnController.createColumn)
 
-router.delete('/:id/:boardId', columnController.deleteColumn)
+router.delete('/:id/:boardId', authenticate, columnController.deleteColumn)
 
 module.exports = router;
