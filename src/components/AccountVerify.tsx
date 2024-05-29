@@ -1,6 +1,6 @@
 import { CircularProgress } from '@mui/material';
 import axios from 'axios'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { CSSProperties } from 'styled-components';
 
@@ -32,9 +32,8 @@ const AccountVerify = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get(`http://localhost:5000/user/${params.id}/verify/${params.token}`)
+        axios.get(`/user/${params.id}/verify/${params.token}`)
         .then((res) => {
-            console.log(res)
             setValidUrl(true)
         })
         .catch((err) => {

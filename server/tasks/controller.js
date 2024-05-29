@@ -1,10 +1,10 @@
 const mongoose = require("mongoose")
 
-const taskModel = require('./task.model')
+const Task = require('./task.model')
 const { updateBoardAfterTaskDeletion } = require("../boards/controller")
 
 exports.getAllTasks = async (req, res, next) => {
-  taskModel.find().then(
+  Task.find().then(
     (results) => {
       res.send({
           status: 200,
@@ -23,7 +23,7 @@ exports.getAllTasks = async (req, res, next) => {
 
 exports.getTasksByColumnId = async (req, res, next) => {
   let columnId = req.params.id
-    taskModel.findOne({ columnId: columnId }).then(
+  Task.findOne({ columnId: columnId }).then(
         (results) => {
             res.send({
                 status: 200,
@@ -42,7 +42,7 @@ exports.getTasksByColumnId = async (req, res, next) => {
 
 exports.getTaskById = async (req, res, next) => {
     let taskId = req.params.id;
-    taskModel.findOne({ _id: taskId }).then(
+    Task.findOne({ _id: taskId }).then(
         (result) => {
             if (result) {
               res.send({
@@ -72,7 +72,7 @@ exports.addTask = (req, res, next) => {
     let title = req.body.title;
     let columnId = req.body.columnId;
 
-    const task = new taskModel({
+    const task = new Task({
       title,
       columnId
     });
@@ -97,13 +97,12 @@ exports.addTask = (req, res, next) => {
   
   
 exports.deleteTask = (req, res, next) => {
-    // va lua id-ul ticketului din request
     let taskId = req.params.id;
 
-    taskModel.findOneAndDelete({ _id: taskId }).then(
+    Task.findOneAndDelete({ _id: taskId }).then(
         async (result) => {
           try {
-            const boardId = req.params.boardId; // Presupunând că ai acces la ID-ul bordului asociat taskului
+            const boardId = req.params.boardId;
             await updateBoardAfterTaskDeletion(boardId, taskId);
             res.send({
                 status: 200,
@@ -133,7 +132,7 @@ exports.updateTask = (req, res, next) => {
     let taskId = req.params.id;
     let body = req.body;
 
-    taskModel
+    Task
         .updateOne(
         { _id: taskId },
         {
@@ -152,7 +151,7 @@ exports.updateTask = (req, res, next) => {
         )
         .then(
         async () => {
-            let updatedTask = await taskModel.find({ _id: taskId });
+            let updatedTask = await Task.find({ _id: taskId });
             res.send({
             status: 200,
             message: "Updated task with success!",

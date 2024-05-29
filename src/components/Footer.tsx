@@ -1,5 +1,3 @@
-// Filename - components/Footer.js
-
 import { Typography } from "@mui/material";
 import styled from "styled-components";
 import FacebookOutlinedIcon from '@mui/icons-material/FacebookOutlined';
@@ -10,7 +8,6 @@ export const Box = styled.div`
 	padding: 20px;
 	background: #9599ff3b;
 	bottom: 0;
-	width: 100%;
 
 	@media (max-width: 1000px) {
 		// padding: 70px 30px;
@@ -45,7 +42,7 @@ export const FooterLink = styled.a`
 	text-decoration: none;
 
 	&:hover {
-		color: blue;
+		color: rgb(91, 66, 243);
 		transition: 200ms ease-in;
 	}
 `;
@@ -59,10 +56,10 @@ export const Heading = styled.p`
 
 const Footer = () => {
 	return (
-		<Box>
+		<Box > 
 			<h1
 				style={{
-					color: "blue",
+					color: "rgb(91, 66, 243)",
 					textAlign: "center",
 					marginTop: "10px",
 				}}
@@ -81,23 +78,23 @@ const Footer = () => {
 						<FooterLink >
                             ticked@gmail.com
 						</FooterLink>
-						<FooterLink href="#">
+						<FooterLink >
 							+40 763 465 307
 						</FooterLink>
-						<FooterLink href="#">
+						<FooterLink >
 							Timisoara, Romania
 						</FooterLink>
 						
 					</Column>
 					<Column style={{ textAlign: 'center'}}>
 						<Heading>Social Media</Heading>
-						<FooterLink href="/">
+						<FooterLink >
 							<FacebookOutlinedIcon style={{fontSize: "40px"}}/>
 						</FooterLink>
-						<FooterLink href="/">
+						<FooterLink>
                             <InstagramIcon style={{fontSize: "40px"}}/>
 						</FooterLink>
-						<FooterLink href="#">
+						<FooterLink>
                             <TwitterIcon style={{fontSize: "40px"}}/>
 						</FooterLink>
 						

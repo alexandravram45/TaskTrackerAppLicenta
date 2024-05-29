@@ -8,7 +8,6 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-
 import { useDispatch } from 'react-redux';
 import { loginAction, setCurrentUser } from '../store';
 import { useLocation, useNavigate, useParams } from 'react-router';
@@ -28,8 +27,6 @@ const LoginContainer = styled.div`
     gap: 20px;
 `;
 
-
-
 const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }) => {
 
   const [error, setError] = useState("")
@@ -39,17 +36,13 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }
   const params = useParams()
 
   const handleLogin = async (username: String, password: String) => {
-      await axios.post('http://localhost:5000/user/login', {
+      await axios.post('/user/login', {
         username: username,
         password: password,
       })
       .then((response) => {
         const token = response.data.token;
-        localStorage.setItem('authToken', token)
-  
-        // Set the received token as a cookie
         document.cookie = `SessionID=${token}; Max-Age=1200; Path=/; Secure; SameSite=None`;
-    
         toast.success('Logged in successfully!', {
           position: "bottom-right",
           autoClose: 3000,
@@ -70,16 +63,16 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }
         const userId = response.data.user.id;
 
         if (location.pathname.includes('join')){
-          axios.get(`http://localhost:5000/board/${params.boardId}/join/${userId}`)
+          axios.get(`/board/${params.boardId}/join/${userId}`)
           .then((res) => {
               console.log(res)
           })
           .catch((err) => {
               console.log(err)
           })
-          navigate(`/boards/${boardId}`)
+          navigate(`/home/boards/${boardId}`)
         } else {
-          navigate("/boards")
+          navigate("/home/boards")
         }
       })
       .catch((err) => {
@@ -108,8 +101,6 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }
     }
   })
 
-
-
   return (
     <Slide in={true} direction="right" unmountOnExit>
     <LoginContainer>
@@ -127,7 +118,7 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }
             InputProps={{
             startAdornment: (
                 <InputAdornment position="start">
-                <InsertEmoticonIcon />
+                  <InsertEmoticonIcon />
                 </InputAdornment>
             ),
             }}  
@@ -142,7 +133,7 @@ const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }
             InputProps={{
             startAdornment: (
                 <InputAdornment position="start">
-                <KeyIcon />
+                  <KeyIcon />
                 </InputAdornment>
             ),
             }}  

@@ -1,6 +1,6 @@
-import { Button, Card, CircularProgress, Divider, FormControl, IconButton, InputAdornment, InputLabel, MenuItem, Select, SelectChangeEvent, TextField, Typography } from '@mui/material';
+import { Button, Card, FormControl, IconButton, InputLabel, MenuItem, Select, SelectChangeEvent, TextField, Typography } from '@mui/material';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Board } from './Home';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
@@ -26,35 +26,11 @@ const Container = styled.div`
   margin-left: 20px;
 `;
 
-const AddNewBoardButton = styled(IconButton)`
-  && {
-    text-transform: none;
-    background-color: transparent;
-    border-radius: 16px;
-    color: #172b4d; 
-    padding: 8px;
-    transition: background-color 0.3s;
-    align-items: center;  
-
-    &:hover {
-      background-color: #ddd;
-    }
-
-    &:active {
-      background-color: #aaa;
-    }
-
-    .MuiSvgIcon-root {
-      margin-right: 8px;
-    }
-  }
-`;
-
 const BoardCard = styled(Card)`
   && {
     width: 300px;
     height: 100px;
-    padding: 10px;
+    padding: 20px;
     text-align: center;
     align-content: center; 
     align-items: center;
@@ -68,18 +44,12 @@ const BoardCard = styled(Card)`
 
 const AllBoards = () => {
   const [showAddNewBoardButton, setShowAddNewBoardButton] = useState(true);
-  const [newBoardName, setNewBoardName] = useState('');
   const [boards, setBoardsHere] = useState<Board[]>([]);
   const [selectedColor, setSelectedColor] = useState("")
-  const boardsRedux = useSelector((state: AppState) => state.boards); 
   const [sortBy, setSortBy] = useState<string>('');
   const [filterBy, setFilterBy] = useState<string>('');
   const currentUser = useSelector((state: AppState) => state.currentUser);
   const dispatch = useDispatch()
-  const selectedBoard = useSelector((state: AppState) => state.selectedBoard);
-
-  
-
 
   const handleSortChange = (event: SelectChangeEvent<string>) => {
     setSortBy(event.target.value);
@@ -90,11 +60,11 @@ const AllBoards = () => {
   };
 
   useEffect(() => {
-    console.log(currentUser?.id)
+    dispatch(setSelectedBoardRedux(null))
   })
 
   const addNewBoard = async (title: String, color: String) => {
-      await axios.post('http://localhost:5000/board', {
+      await axios.post('/board', {
           user: currentUser,
           name: title,
           columns: [],
@@ -111,11 +81,10 @@ const AllBoards = () => {
               theme: "light",
             });
         
-          console.log(response.data.data)
           const newBoard: Board = response.data.data;
           const updated = [...boards, newBoard]
           dispatch(setBoards(updated))
-          getAllBoards(); // Fetch boards again to update the list
+          getAllBoards(); 
           closeAddNewCard()
 
           formik.resetForm();
@@ -171,18 +140,15 @@ const AllBoards = () => {
   
   })
 
-
   useEffect(() => {
     getAllBoards();
   }, [sortBy, filterBy]);
 
   const getAllBoards = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/board?userId=${currentUser?.id}`);
+      const response = await axios.get(`/board?userId=${currentUser?.id}`);
       let sortedBoards = response.data;
-      console.log(sortedBoards)
 
-      // Sortare în funcție de criteriul selectat
       if (sortBy === 'createdAt') {
         sortedBoards = response.data.sort((a: any, b: any) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -201,9 +167,11 @@ const AllBoards = () => {
         sortedBoards = response.data.filter((a: any) => {
           return a.favorite === true;
         })
+      } else if (filterBy === 'archived') {
+        const response = await axios.get(`/board/archived?userId=${currentUser?.id}`);
+        sortedBoards = response.data;
       }
       setBoardsHere(sortedBoards);
-      // dispatch(setBoards(sortedBoards))
 
     } catch (error) {
       console.error('Error fetching boards:', error);
@@ -218,23 +186,13 @@ const AllBoards = () => {
     setShowAddNewBoardButton(true)
   }
 
-  const handleNewBoardNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setNewBoardName(event.target.value);
-  }
-
-  const saveNewBoard = () => {
-    // Aici poți adăuga logica pentru a salva noul bord
-    console.log("Noul bord salvat:", newBoardName);
-    setShowAddNewBoardButton(true);
-    setNewBoardName('');
-  }
 
   return (
     <div>
-      <Card style={{ margin: 30, padding: 30}}>
+      <Card style={{ margin: 30, marginTop: 16, padding: 30}}>
       
       <div style={{ display: 'flex', padding: '40px', justifyContent: 'center', alignItems: 'center' }}>
-        <img src={require('../ticked.png')} width='300px' alt='ticked' style={{ marginRight: '20px' }} />
+        <img src={require('../images/ticked.png')} width='300px' alt='ticked' style={{ marginRight: '20px' }} />
         <Button style={{backgroundColor: '#0c66e4', color: 'white'}}><PersonAddAltIcon style={{marginRight: 10}} />Invite members</Button>
       </div>
       </Card>
@@ -254,6 +212,7 @@ const AllBoards = () => {
         >
           <MenuItem value="default">-</MenuItem>
           <MenuItem value="favorites">Favorites</MenuItem>
+          <MenuItem value="archived">Archived</MenuItem>
         </Select>
       </FormControl>
 
@@ -303,7 +262,7 @@ const AllBoards = () => {
                   helperText={(formik.touched.title && formik.errors.title) || (formik.touched.title && boards.find(board => board.name === formik.values.title) ? `Board with name "${formik.values.title}" already exists` : '')}               
               />
               <Typography variant='body2'>Choose background</Typography>
-              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap',}}>
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center'}}>
               {
                   backgroundColors.map((color, index) => {
                       return <ColorButton 
@@ -329,12 +288,19 @@ const AllBoards = () => {
         )}
 
         {boards.map((board) => (
-          <Link to={`/boards/${board._id}`} style={{ textDecoration: 'none' }} onClick={() => dispatch(setSelectedBoardRedux(board))}>
+          <Link to={`/home/boards/${board._id}`} style={{ textDecoration: 'none' }} onClick={() => dispatch(setSelectedBoardRedux(board))}>
             <BoardCard style={{backgroundImage: board.color}}>
-              <Typography variant='body1'>{board.name}</Typography>
+              <Typography variant='body1'
+                sx={{
+                  color: board.color === 'linear-gradient(23deg, rgba(24,24,24,1) 0%, rgba(0,29,92,1) 100%)' ? 'white' : '#00000092'
+                }}
+              >{board.name}</Typography>
               {
                 board.favorite
-                ? <StarIcon style={{color: 'rgba(17, 17, 17, 0.503)', marginLeft: 6}}/>
+                ? <StarIcon style={{
+                  color: board.color === 'linear-gradient(23deg, rgba(24,24,24,1) 0%, rgba(0,29,92,1) 100%)' ? 'white' : '#00000092',
+                  marginLeft: 6
+                }}/>
                 : null
               }
             </BoardCard>

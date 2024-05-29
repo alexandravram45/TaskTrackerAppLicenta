@@ -1,5 +1,6 @@
 const express = require('express');
 const userController = require('./controller');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -22,5 +23,7 @@ router.post('/:id/sendResetPasswordEmail', userController.sendResetPasswordEmail
 router.post('/:userId/invite/:boardId', userController.sendInvitationLink)
 
 router.post('/:userId/assign/:boardId', userController.sendAssignNotification)
+
+router.get('/:userId/points', userController.getUserPoints);
 
 module.exports = router;

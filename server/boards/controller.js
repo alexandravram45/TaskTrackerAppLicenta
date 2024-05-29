@@ -64,9 +64,28 @@ exports.getAllBoards = async (req, res, next) => {
       
       const boards = await boardModel.find({
           $or: [
-              { user: userId }, // Verifică dacă userId este egal cu user-ul boardului
-              { members: { $in: [userId] } } // Verifică dacă userId este inclus în array-ul members
-          ]
+              { user: userId }, 
+              { members: { $in: [userId] } } 
+          ],
+          archived: { $ne: true }
+      });
+      
+      res.json(boards);
+  } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: err });
+  }
+};
+
+exports.getAllArchivedBoards = async (req, res, next) => {
+  try {
+      const { userId } = req.query;
+      if (!userId) {
+          return res.status(400).json({ message: 'User ID is required' });
+      }
+      
+      const boards = await boardModel.find({
+          archived: true
       });
       
       res.json(boards);
@@ -77,12 +96,24 @@ exports.getAllBoards = async (req, res, next) => {
 };
 
 
+
 exports.updateBoard = async (req, res, next) => {
     let tasks = req.body.tasks;
     let columns = req.body.columns;
+    let members = req.body.members;
+    let archived = req.body.archived;
     let boardId = req.params.id;
 
-    let newBoard = await boardModel.findOneAndUpdate( { _id: boardId }, { $set : {tasks: tasks, columns: columns}}, { new: true });
+    let newBoard = await boardModel.findOneAndUpdate( 
+      { _id: boardId }, 
+      { $set : {
+        tasks: tasks, 
+        columns: columns, 
+        members: members, 
+        archived: archived
+      }}, 
+      { new: true }
+    );
 
     newBoard.save().then(
       (result) => {
@@ -99,32 +130,6 @@ exports.updateBoard = async (req, res, next) => {
       }
     );
 }
-
-exports.updateColumnOrder = async (req, res, next) => {
-  let boardId = req.params.id;
-  let newColumnOrder = req.body.newColumnOrder;
-
-  const board = await boardModel.findOneAndUpdate( { _id: boardId }, { $set : { columnOrder: newColumnOrder }}, { new: true });
-
-  if (!board) {
-    throw new Error('Board not found');
-  }
-
-  board.save().then(
-    (result) => {
-      res.status(200).json({
-        message: "Updated board column order with success!",
-        data: result,
-      });
-    },
-    (error) => {
-      res.status(500).json({
-        message: "Something went wrong!",
-        error: error,
-      });
-    }
-  );
-};
 
 exports.updateBoardName = async (req, res, next) => {
   let newBoardName = req.body.name;

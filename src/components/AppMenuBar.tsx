@@ -1,6 +1,5 @@
-import { AppBar, Avatar, Box, Button, IconButton, Menu, Switch, Tooltip} from '@mui/material'
-import React, { useEffect, useState } from 'react'
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import { AppBar, Avatar, Box, Button, IconButton, Menu, Tooltip} from '@mui/material'
+import React, { useState } from 'react'
 import styled from 'styled-components';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -9,9 +8,6 @@ import Register from './Register';
 import Login from './Login';
 import { useSelector } from 'react-redux';
 import { AppState } from '../store';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import { useTheme } from '@mui/material/styles';
 import ForgotPassword from './ForgotPassword';
 
 const StyledButton = styled.button`
@@ -61,21 +57,16 @@ const StyledButton = styled.button`
   }
 `;
 
-interface AppMenuBarProps {
-  toggleDarkMode: boolean;
-  onToggleDarkMode: () => void;
-}
-
-const AppMenuBar: React.FC<AppMenuBarProps> = ({toggleDarkMode, onToggleDarkMode}) => {
+const AppMenuBar = () => {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [isChecked, setIsChecked] = useState<boolean>(false);
   const [isCheckedReset, setIsCheckedReset] = useState<boolean>(false);
-
-  const isLoggedIn = useSelector((state: AppState) => state.isLoggedIn);
   const isRegistered = useSelector((state: AppState) => state.isRegistered);
   const user = useSelector((state: AppState) => state.currentUser);
-  const avatarLetters = user ? user?.firstName.charAt(0) + user?.lastName.charAt(0) : '';
-  const theme = useTheme();
+
+  const avatarLetters = user && user.firstName && user.lastName
+  ? user.firstName.charAt(0) + user.lastName.charAt(0)
+  : '';  
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElUser(event.currentTarget);
@@ -87,32 +78,18 @@ const AppMenuBar: React.FC<AppMenuBarProps> = ({toggleDarkMode, onToggleDarkMode
 
   const handleToggle = () => {
     setIsChecked((prev) => !prev);
-    console.log('isChecked:', isChecked);
   };
 
   const handleToggleReset = () => {
     setIsCheckedReset((prev) => !prev);
-
-    console.log('isCheckedreset:', isCheckedReset);
-
   };
 
   return (
-    <AppBar position='static' sx={{ position: 'absolute', backgroundColor: 'rgb(255 255 255 / 16%)', borderBottom: '0.5px solid #ffffff73', boxShadow: 'none', top: 0}}>
+    <AppBar position='static' sx={{ paddingY: 1, position: 'absolute', backgroundColor: 'rgb(255 255 255 / 16%)', borderBottom: '0.5px solid #ffffff73', boxShadow: 'none', top: 0}}>
       <div style={{display: 'flex', padding: 1, alignItems: 'center', justifyContent: 'space-between', marginRight: '30px'}}>
-        <div style={{ flexGrow: 1 }}>
-          <img src={require('../ticked.png')} width='170px' alt='ticked' />
+        <div style={{ flexGrow: 1, alignItems: 'center', display: 'flex', justifyContent: 'flex-start' }}>
+          <img src={require('../images/ticked.png')} width='170px' alt='ticked' style={{marginLeft: '10px'}}/>
         </div>
-        <div>
-          <IconButton sx={{ ml: 1 }} onClick={onToggleDarkMode} color="inherit">
-            {toggleDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
-        </div>
-
-
-        <Button sx={{ textTransform: 'none', color: "#303030"}}>
-          <NotificationsNoneIcon />
-        </Button>
         <ToastContainer />
         <Box sx={{ ml: 1, textAlign: 'center'}}>
             <Tooltip title="Profile">
@@ -146,11 +123,11 @@ const AppMenuBar: React.FC<AppMenuBarProps> = ({toggleDarkMode, onToggleDarkMode
               
               <Box sx={{ width: '350px', height: 'auto', padding: 5, alignItems: 'center', display: 'flex', justifyContent: 'center' }}>
                 { user !== null ? (
-                  <Profile handleToggle={handleToggle} />
+                  <Profile />
                 ) : isChecked ? (
-                  <Register handleToggle={handleToggle} />
+                  <Register handleToggle={handleToggle} landingEmail=''/>
                 ) : (isCheckedReset) ? (
-                  <ForgotPassword handleToggleReset={handleToggleReset} />
+                  <ForgotPassword handleToggleReset={handleToggleReset} landingEmail=''/>
 
                 ): (!isChecked && !isCheckedReset || isRegistered || user == null) ? (
                   <Login handleToggle={handleToggle} handleToggleReset={handleToggleReset} boardId={""}/>

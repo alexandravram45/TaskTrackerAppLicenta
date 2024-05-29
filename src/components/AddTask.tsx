@@ -22,18 +22,11 @@ const AddTask = () => {
   const addNewTask = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    await axios.post('http://localhost:5000/tasks', {
+    await axios.post('/tasks', {
       title: title, 
       dueDate: dueDate, 
       description: description
     })
-      .then((response) => {
-        console.log(response.data)
-      })
-      .catch((error) => {
-        console.log(error.message)
-      })
-
       setTitle('')
       setDueDate(dayjs())
       setDescription('')
