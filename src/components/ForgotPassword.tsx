@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { InputAdornment, Link, Slide, TextField, Typography } from '@mui/material';
 import { StyledButton } from './AppMenuBar';
 import styled from 'styled-components';
 import axios from 'axios';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 

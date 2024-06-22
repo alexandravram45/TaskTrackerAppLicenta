@@ -1,7 +1,7 @@
 import { Box, Card, Grid, LinearProgress, Paper, TableContainer, Typography, linearProgressClasses } from '@mui/material'
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
-import { AppState, setSelectedBoardRedux } from '../store';
+import { setSelectedBoardRedux } from '../store';
 import axios from 'axios';
 import { TaskInterface } from './Home';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
@@ -9,6 +9,7 @@ import styled from 'styled-components';
 import Check from '@mui/icons-material/Check';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { DataGrid, GridColDef  } from '@mui/x-data-grid';
+import { useAuth } from './AuthProvider';
 
 
 const PrettyCard = styled(Box)`
@@ -31,7 +32,7 @@ type TitleImages = {
 
 const Progress = () => {
 
-    const currentUser = useSelector((state: AppState) => state.currentUser);
+    const {user} = useAuth()
     const dispatch = useDispatch()
     const [doneTasks, setDonetasks] = useState<TaskInterface[]>([])
     const [allTasks, setAllTasks] = useState<TaskInterface[]>([])
@@ -62,7 +63,7 @@ const Progress = () => {
         dispatch(setSelectedBoardRedux(null))
         const fetchPoints = async () => {
             try {
-            const response = await axios.get(`user/${currentUser?.id}/points`);
+            const response = await axios.get(`user/${user?.id}/points`);
             setTotalPoints(response.data.totalPoints);
             setTitle(response.data.title);
             setPointsTillNext(response.data.pointsTillNext)
@@ -73,7 +74,7 @@ const Progress = () => {
         };
   
       fetchPoints();
-    }, [currentUser?.id]);
+    }, [user?.id]);
 
     const columns: GridColDef[] = [
         { field: 'title', headerName: 'Task Title', flex: 1,  },
@@ -108,8 +109,8 @@ const Progress = () => {
         await axios.get(`/tasks`)
             .then((res) => {
                 const allTasks: TaskInterface[] = res.data.data
-                const all = allTasks.filter(task => task.assignee === currentUser?.id);
-                const done = allTasks.filter(task => task.done === true && task.assignee === currentUser?.id);
+                const all = allTasks.filter(task => task.assignee === user?.id);
+                const done = allTasks.filter(task => task.done === true && task.assignee === user?.id);
                 setAllTasks(all);
                 setDonetasks(done);
                 setTaskData([
@@ -133,7 +134,7 @@ const Progress = () => {
     <Card style={{ marginLeft: 30, padding: 30, marginTop: 16}}>
       <div >
 
-        <Typography variant='h5'>Hey {currentUser?.firstName},</Typography>
+        <Typography variant='h5'>Hey {user?.firstName},</Typography>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6}}>
             <Typography variant='body2'>Your progress looks great!</Typography>
             <AutoAwesome sx={{ color: 'rgb(255, 230, 4)'}}/>

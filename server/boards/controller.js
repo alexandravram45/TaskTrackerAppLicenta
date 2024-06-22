@@ -1,7 +1,6 @@
 const mongoose = require("mongoose")
 
 const boardModel = require('./board.model');
-const User = require("../user/user.model");
 
 exports.createBoard = (req, res, next) => {
   let user = req.body.user.id;
@@ -226,21 +225,18 @@ const columnModel = require('../columns/column.model');
 exports.updateBoardAfterTaskDeletion = async (boardId, deletedTaskId) => {
     try {
       console.log(typeof deletedTaskId)
-        // Găsește bordul după ID
         const board = await boardModel.findById(boardId);
         
         if (!board) {
             throw new Error('Board not found');
         }
         
-        // Elimină taskul șters din array-ul de taskuri al bordului
         board.tasks = board.tasks.filter(task => {
           const taskString = task.toString();
           const deletedTaskString = deletedTaskId.toString();
           console.log(`Comparing task ${taskString} with deleted task ${deletedTaskString}`);
           return taskString !== deletedTaskString;
         });        
-        // Actualizează fiecare coloană asociată pentru a elimina taskul șters din array-ul de taskuri al coloanelor
         const columnUpdatePromises = board.columns.map(async columnId => {
             const column = await columnModel.findById(columnId);
             if (column) {
@@ -258,14 +254,13 @@ exports.updateBoardAfterTaskDeletion = async (boardId, deletedTaskId) => {
         
         await Promise.all(columnUpdatePromises);
         
-        // Salvează bordul actualizat în baza de date
         await board.save();
         
         
         console.log(`Board ${boardId} updated after task deletion`);
     } catch (error) {
         console.error('Error updating board after task deletion:', error);
-        throw error; // Aruncă eroarea pentru a fi gestionată în funcția care apelează această metodă
+        throw error; 
     }
 };
 
@@ -274,7 +269,6 @@ exports.updateBoardAfterTaskDeletion = async (boardId, deletedTaskId) => {
 exports.updateBoardAfterColumnDeletion = async (boardId, deletedColumnId) => {
   try {
     console.log(typeof deletedColumnId)
-      // Găsește bordul după ID
       const board = await boardModel.findById(boardId);
       
       if (!board) {

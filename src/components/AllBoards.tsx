@@ -1,11 +1,11 @@
-import { Button, Card, FormControl, IconButton, InputLabel, MenuItem, Select, SelectChangeEvent, TextField, Typography } from '@mui/material';
+import { Button, Card, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, TextField, Typography } from '@mui/material';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { Board } from './Home';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppState, setBoards, setSelectedBoardRedux } from '../store';
+import { useDispatch } from 'react-redux';
+import { setBoards, setSelectedBoardRedux } from '../store';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import AddIcon from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
@@ -16,6 +16,7 @@ import { toast } from 'react-toastify';
 import CheckIcon from '@mui/icons-material/Check';
 import { backgroundColors } from '../colors';
 import StarIcon from '@mui/icons-material/Star';
+import { useAuth } from './AuthProvider';
 
 const Container = styled.div`
   display: flex;
@@ -48,7 +49,7 @@ const AllBoards = () => {
   const [selectedColor, setSelectedColor] = useState("")
   const [sortBy, setSortBy] = useState<string>('');
   const [filterBy, setFilterBy] = useState<string>('');
-  const currentUser = useSelector((state: AppState) => state.currentUser);
+  const { user } = useAuth()
   const dispatch = useDispatch()
 
   const handleSortChange = (event: SelectChangeEvent<string>) => {
@@ -65,7 +66,7 @@ const AllBoards = () => {
 
   const addNewBoard = async (title: String, color: String) => {
       await axios.post('/board', {
-          user: currentUser,
+          user: user,
           name: title,
           columns: [],
           color: color,
@@ -137,7 +138,6 @@ const AllBoards = () => {
           }
       }
   }
-  
   })
 
   useEffect(() => {
@@ -146,7 +146,7 @@ const AllBoards = () => {
 
   const getAllBoards = async () => {
     try {
-      const response = await axios.get(`/board?userId=${currentUser?.id}`);
+      const response = await axios.get(`/board?userId=${user?.id}`);
       let sortedBoards = response.data;
 
       if (sortBy === 'createdAt') {
@@ -168,7 +168,7 @@ const AllBoards = () => {
           return a.favorite === true;
         })
       } else if (filterBy === 'archived') {
-        const response = await axios.get(`/board/archived?userId=${currentUser?.id}`);
+        const response = await axios.get(`/board/archived?userId=${user?.id}`);
         sortedBoards = response.data;
       }
       setBoardsHere(sortedBoards);
@@ -267,7 +267,7 @@ const AllBoards = () => {
                   backgroundColors.map((color, index) => {
                       return <ColorButton 
                           key={index} 
-                          style={{backgroundImage: color}}
+                          style={{backgroundImage: color, flex: '1 1 30%'}}
                           onClick={() => setSelectedColor(color)}
                       >
                           { selectedColor === color ? (

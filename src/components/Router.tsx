@@ -8,38 +8,28 @@ import InvitationPage from './InvitationPage'
 import LandingPage from './LandingPage'
 import AccountVerify from './AccountVerify'
 import ResetPassword from './ResetPassword'
-import { useSelector } from 'react-redux'
-import { AppState } from '../store'
+import PrivateRoute from './PrivateRoute'
+import { useAuth } from './AuthProvider'
 
 const Router = () => {
 
-  const user = useSelector((state: AppState) => state.currentUser);
+  const { user } = useAuth();
 
   return (
     <BrowserRouter>
       <Routes>
-        { user
-          ? <>
-              <Route path="/home" element={<Home user={user} />}>
-                <Route path="boards" element={<AllBoards />} />
-                <Route path="boards/:boardId" element={<BoardComponents />} />
-                <Route path="boards/:boardId/calendarView" element={<CalendarView />} />
-                <Route path="progress" element={<Progress />} />
-                <Route path="" element={<Navigate to="/home/boards" />} />
-              </Route>
-              <Route path="/" element={<Navigate to="/home/boards" />} />
-              <Route path='/landing' element={<LandingPage />} />
-
-              <Route path="board/:boardId/join/:userId" element={<InvitationPage />} /> 
-            </>
-          : <>
-            <Route path='/landing' element={<LandingPage />} />
-            <Route path="/" element={<Navigate to="/landing" />} />
-            <Route path="board/:boardId/join/:userId" element={<InvitationPage />}/>
-            <Route path="user/:id/verify/:token" element={<AccountVerify />}/>
-            <Route path="/resetPassword/:token" element={<ResetPassword />}/>
-          </>
-        }
+        <Route path="/home" element={<PrivateRoute>{user && <Home user={user} />}</PrivateRoute>}>
+            <Route path="boards" element={<AllBoards />} />
+            <Route path="boards/:boardId" element={<BoardComponents />} />
+            <Route path="boards/:boardId/calendarView" element={<CalendarView />} />
+            <Route path="progress" element={<Progress />} />
+            <Route path="" element={<Navigate to="/home/boards" />} />
+        </Route>
+        <Route path="/" element={user ? <Navigate to="/home/boards" /> : <Navigate to="/landing" />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="board/:boardId/join/:userId" element={<InvitationPage />} />
+        <Route path="user/:id/verify/:token" element={<AccountVerify />} />
+        <Route path="/resetPassword/:token" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
       

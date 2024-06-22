@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import axios from 'axios';
-import { useDispatch } from 'react-redux';
-import { setCurrentUser } from './store';
 import Router from './components/Router';
+import { AuthProvider } from './components/AuthProvider';
 
 export interface User {
   id: string;
@@ -31,7 +30,7 @@ axios.interceptors.response.use(
   response => response,
   error => {
     if (error.response && error.response.status === 401) {
-      if (error.config.url !== '/profile') { // Avoid infinite loop
+      if (error.config.url !== '/profile') { 
         window.location.href = '/landing';
       }
     }
@@ -39,53 +38,18 @@ axios.interceptors.response.use(
   }
 );
 
-  const [loading, setLoading] = useState(true);
-
-  const dispatch = useDispatch()
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await axios.get('/profile');
-        const userData: User = {
-          id: res.data.user._id,
-          username: res.data.user.username,
-          firstName: res.data.user.firstName,
-          lastName: res.data.user.lastName,
-          email: res.data.user.email,
-          color: res.data.user.color,
-        };
-        
-        dispatch(setCurrentUser(userData));
-
-      } catch (err) {
-        console.log(err);
-
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [ ]);
-
-
   const theme = createTheme({
     typography: {
       fontFamily: 'Poppins, sans-serif',
     },
   });
-
- 
  
   return (
-    // <AuthProvider>
       <ThemeProvider theme={theme}>
+        <AuthProvider>
           <Router  />
-
+        </AuthProvider>
       </ThemeProvider>
-    // </AuthProvider>
-
   );
 };
 

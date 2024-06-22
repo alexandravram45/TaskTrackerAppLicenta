@@ -42,8 +42,6 @@ const CalendarView = () => {
     })
   }
 
-
-
   useEffect(() => {
     getBoard();
     if (board) {

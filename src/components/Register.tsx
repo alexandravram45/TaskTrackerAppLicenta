@@ -12,7 +12,6 @@ import { registerAction, AppState } from '../store';
 import * as Yup from 'yup';
 import { useFormik } from 'formik';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import AlternateEmailRoundedIcon from '@mui/icons-material/AlternateEmailRounded';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
 interface RegisterProps {

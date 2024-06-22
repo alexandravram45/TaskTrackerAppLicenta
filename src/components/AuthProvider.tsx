@@ -1,61 +1,24 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode, FC } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
-import { useDispatch } from 'react-redux';
-import { setCurrentUser } from '../store';  // Actualizează calea în funcție de structura proiectului tău
-import { User } from '../App';  // Actualizează calea în funcție de structura proiectului tău
+
+interface User {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  color: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  setUser: (user: User | null) => void;
+  loading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await axios.get('/profile', {
-          withCredentials: true,
-        });
-        const userData = {
-          id: res.data._id,
-          username: res.data.username,
-          firstName: res.data.firstName,
-          lastName: res.data.lastName,
-          email: res.data.email,
-          color: res.data.color,
-        };
-        setUser(userData);
-        dispatch(setCurrentUser(userData));
-      } catch (err) {
-        console.log(err);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  const authContextValue: AuthContextType = {
-    user,
-    setUser,
-  };
-
-  return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -63,4 +26,36 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-export default AuthProvider;
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await axios.get('/profile', { withCredentials: true });
+        const userData: User = {
+          id: res.data.user._id,
+          username: res.data.user.username,
+          firstName: res.data.user.firstName,
+          lastName: res.data.user.lastName,
+          email: res.data.user.email,
+          color: res.data.user.color,
+        };
+        setUser(userData);
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, loading, setUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

@@ -30,6 +30,7 @@ export interface TaskInterface {
   _id: string;
   title: string;
   description: string,
+  columnId: string,
   dueDate: Date | null,
   points: number | null, 
   assignee: string | null,
@@ -44,8 +45,15 @@ const Container = styled.div`
   display: flex;
   height: 100%;
   min-height: 100vh;
+  overflow-x: none;
   background-image: ${props => props.color !== undefined ? props.color : 'white'};
 `;
+
+const HomeContainer = styled.div`
+overflow-x: hidden;
+width: 100%;
+`;
+
 
 const Home: React.FC<HomeProps> = ({ user }) => {
     
@@ -61,9 +69,9 @@ const Home: React.FC<HomeProps> = ({ user }) => {
         <AppMenuBar />
         <Container color={selectedBoardRedux?.color}>
           <SideBar user={user} onBoardSelect={handleBoardSelect} />
-          <div id='home' style={{width: '86%', backgroundColor: 'transparent', marginTop: '61px', float: 'left', borderTopLeftRadius: 20}}>
+          <HomeContainer id='home' style={{ backgroundColor: 'transparent', marginTop: '61px', float: 'left', borderTopLeftRadius: 20}}>
             <Outlet />
-          </div>
+          </HomeContainer>
         </Container>
     </>
     )

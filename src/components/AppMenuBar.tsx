@@ -1,4 +1,4 @@
-import { AppBar, Avatar, Box, Button, IconButton, Menu, Tooltip} from '@mui/material'
+import { AppBar, Avatar, Box, IconButton, Menu, Tooltip} from '@mui/material'
 import React, { useState } from 'react'
 import styled from 'styled-components';
 import { ToastContainer } from 'react-toastify';
@@ -9,6 +9,7 @@ import Login from './Login';
 import { useSelector } from 'react-redux';
 import { AppState } from '../store';
 import ForgotPassword from './ForgotPassword';
+import { useAuth } from './AuthProvider';
 
 const StyledButton = styled.button`
   align-items: center;
@@ -62,7 +63,7 @@ const AppMenuBar = () => {
   const [isChecked, setIsChecked] = useState<boolean>(false);
   const [isCheckedReset, setIsCheckedReset] = useState<boolean>(false);
   const isRegistered = useSelector((state: AppState) => state.isRegistered);
-  const user = useSelector((state: AppState) => state.currentUser);
+  const { user } = useAuth()
 
   const avatarLetters = user && user.firstName && user.lastName
   ? user.firstName.charAt(0) + user.lastName.charAt(0)

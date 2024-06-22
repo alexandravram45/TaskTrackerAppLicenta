@@ -5,18 +5,22 @@ import styled from 'styled-components';
 import KeyIcon from '@mui/icons-material/Key';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import { toast } from 'react-toastify';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useDispatch } from 'react-redux';
 import { loginAction, setCurrentUser } from '../store';
 import { useLocation, useNavigate, useParams } from 'react-router';
-
+import { useAuth } from './AuthProvider';
 
 interface LoginProps {
   handleToggle: () => void,
   handleToggleReset: () => void,
   boardId: string
+}
+
+interface ErrorResponse {
+  message: string;
 }
 
 const LoginContainer = styled.div`
@@ -27,131 +31,142 @@ const LoginContainer = styled.div`
     gap: 20px;
 `;
 
-const Login:React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }) => {
-
-  const [error, setError] = useState("")
+const Login: React.FC<LoginProps> = ({ handleToggle, boardId, handleToggleReset }) => {
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-  const params = useParams()
+  const params = useParams();
+  const { setUser } = useAuth();
 
   const handleLogin = async (username: String, password: String) => {
-      await axios.post('/user/login', {
+    try {
+      const response = await axios.post('/user/login', {
         username: username,
         password: password,
-      })
-      .then((response) => {
-        const token = response.data.token;
-        document.cookie = `SessionID=${token}; Max-Age=1200; Path=/; Secure; SameSite=None`;
-        toast.success('Logged in successfully!', {
-          position: "bottom-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          progress: undefined,
-          draggable: true,
-          theme: "light",
-        });
-    
-        setError('');
-        formik.resetForm();
-  
-        dispatch(setCurrentUser(response.data.user))  
-        dispatch(loginAction(response.data.user))
-
-        const userId = response.data.user.id;
-
-        if (location.pathname.includes('join')){
-          axios.get(`/board/${params.boardId}/join/${userId}`)
-          .then((res) => {
-              console.log(res)
-          })
-          .catch((err) => {
-              console.log(err)
-          })
-          navigate(`/home/boards/${boardId}`)
-        } else {
-          navigate("/home/boards")
-        }
-      })
-      .catch((err) => {
-        setError(err.response?.data.message)
       });
+
+      const token = response.data.token;
+      document.cookie = `SessionID=${token}; Max-Age=1200; Path=/; Secure; SameSite=None`;
+      toast.success('Logged in successfully!', {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        progress: undefined,
+        draggable: true,
+        theme: "light",
+      });
+
+      setUsernameError('');
+      setPasswordError('');
+      formik.resetForm();
+
+      setUser(response.data.user);
+      dispatch(setCurrentUser(response.data.user));
+      dispatch(loginAction(response.data.user));
+
+      const userId = response.data.user.id;
+      console.log(location.pathname)
+      if (location.pathname.includes('join')) {
+        console.log(location.pathname)
+        await axios.get(`/board/${params.boardId}/join/${userId}`);
+        navigate(`/home/boards/${boardId}`);
+      } else {
+        navigate("/home/boards");
+      }
+    } catch (err: unknown) {
+      const axiosError = err as AxiosError<ErrorResponse>;
+      console.log(axiosError);
+      if (axiosError.response && axiosError.response.data && axiosError.response.data.message) {
+        const message = axiosError.response.data.message;
+        if (message.includes('username')) {
+          setUsernameError(message);
+          setPasswordError('');
+        } else if (message.includes('password')) {
+          setUsernameError('');
+          setPasswordError(message);
+        } else {
+          setUsernameError('Login failed. Please try again.');
+          setPasswordError('Login failed. Please try again.');
+        }
+      }
+    }
   };
 
-  
   const validationSchema = Yup.object().shape({
     loginUsername: Yup.string()
       .required('username is required'),
-      loginPassword: Yup.string()
+    loginPassword: Yup.string()
       .required('password is required'),
   });
-  
+
   let initialValues = {
     loginUsername: "",
     loginPassword: "",
   };
-  
+
   const formik = useFormik({
     initialValues,
     validationSchema,
     onSubmit: (values) => {
-      handleLogin(values.loginUsername, values.loginPassword)
+      handleLogin(values.loginUsername, values.loginPassword);
     }
-  })
+  });
 
   return (
     <Slide in={true} direction="right" unmountOnExit>
-    <LoginContainer>
-      <Typography variant="h5" style={{color: '#5B42F3', fontWeight: '700', fontFamily: 'Poppins' }}>Login</Typography>
-      <form 
-          style={{ textAlign: 'center', display: 'flex', flexDirection: "column", alignItems: "center", gap: '20px'}}
+      <LoginContainer>
+        <Typography variant="h5" style={{ color: '#5B42F3', fontWeight: '700', fontFamily: 'Poppins' }}>Login</Typography>
+        <form
+          style={{ textAlign: 'center', display: 'flex', flexDirection: "column", alignItems: "center", gap: '20px' }}
           onSubmit={formik.handleSubmit}
-        >  
-        <TextField id="loginUsername" name="loginUsername" label="username" variant="standard" 
-            value={formik.values.loginUsername} 
+        >
+          <TextField id="loginUsername" name="loginUsername" label="username" variant="standard"
+            value={formik.values.loginUsername}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            error={error !== "" || formik.touched.loginUsername && Boolean(formik.errors.loginUsername)}
-            helperText={error || formik.touched.loginUsername && formik.errors.loginUsername}
+            error={usernameError !== "" || (formik.touched.loginUsername && Boolean(formik.errors.loginUsername))}
+            helperText={usernameError || (formik.touched.loginUsername && formik.errors.loginUsername)}
             InputProps={{
-            startAdornment: (
+              startAdornment: (
                 <InputAdornment position="start">
                   <InsertEmoticonIcon />
                 </InputAdornment>
-            ),
-            }}  
+              ),
+            }}
             style={{ width: 230 }}
-        />
-        <TextField id="loginPassword" name='loginPassword' label="password" type="password" variant="standard" 
-            value={formik.values.loginPassword} 
+          />
+          <TextField id="loginPassword" name='loginPassword' label="password" type="password" variant="standard"
+            value={formik.values.loginPassword}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            error={error !== "" || formik.touched.loginPassword && Boolean(formik.errors.loginPassword)}
-            helperText={error || formik.touched.loginPassword && formik.errors.loginPassword}
+            error={passwordError !== "" || (formik.touched.loginPassword && Boolean(formik.errors.loginPassword))}
+            helperText={passwordError || (formik.touched.loginPassword && formik.errors.loginPassword)}
             InputProps={{
-            startAdornment: (
+              startAdornment: (
                 <InputAdornment position="start">
                   <KeyIcon />
                 </InputAdornment>
-            ),
-            }}  
+              ),
+            }}
             style={{ width: 230 }}
           />
-        <StyledButton type='submit'>
+          <StyledButton type='submit'>
             <span>Log in</span>
-        </StyledButton>
-      </form>
+          </StyledButton>
+        </form>
 
-        <Link component="button" onClick={handleToggleReset} style={{color: '#5B42F3'}} underline="hover">
-            Forgot password?
+        <Link component="button" onClick={handleToggleReset} style={{ color: '#5B42F3' }} underline="hover">
+          Forgot password?
         </Link>
-        <Link component="button" onClick={handleToggle} style={{color: '#5B42F3'}} underline="hover">
-            Don't have an account?
+        <Link component="button" onClick={handleToggle} style={{ color: '#5B42F3' }} underline="hover">
+          Don't have an account?
         </Link>
 
-    </LoginContainer>
+      </LoginContainer>
     </Slide>
   );
 }

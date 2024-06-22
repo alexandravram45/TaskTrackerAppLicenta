@@ -29,7 +29,7 @@ interface MobileMenuButtonProps {
 
 const MobileMenuButton: React.FC<MobileMenuButtonProps> = ({ onOpen }) => {
     return (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', mt: 7, p: 2}}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', mt: 10, p: 2, mr: 2}}>
         <IconButton onClick={onOpen} size="large" edge="start" color="inherit" aria-label="menu">
             <MenuIcon />
         </IconButton>
@@ -371,13 +371,14 @@ const SideBar: React.FC<SideBarProps> = ({ user, onBoardSelect }) => {
                                     helperText={formik.touched.title && formik.errors.title}
                                 />
                                 <Typography variant='body2'>Choose background</Typography>
-                                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap',}}>
+                                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center'}}>
                                 {
                                     backgroundColors.map((color, index) => {
                                         return <ColorButton 
                                             key={index} 
-                                            style={{backgroundImage: color}}
+                                            style={{backgroundImage: color , flex: '1 1 30%'}}
                                             onClick={() => setSelectedColor(color)}
+                                            
                                         >
                                             { selectedColor === color ? (
                                                 <CheckIcon style={{ color: 'white' }} />
