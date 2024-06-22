@@ -65,7 +65,7 @@ const register = async (req, res, next) => {
   const { username, email, firstName, lastName, password } = req.body;
 
   if (!username || !password || !email || !firstName || !lastName){
-    res.status(401).json({message: "Send needed params"})
+    res.status(402).json({message: "Send needed params"})
     return
   }
   try {
@@ -75,7 +75,7 @@ const register = async (req, res, next) => {
       firstName, 
       lastName, 
       password, 
-      color: getRandomColor() 
+      color: getRandomColor(),
     });
     
     const existingUser = await User.findOne({ email });
@@ -111,7 +111,7 @@ const register = async (req, res, next) => {
           tasks: tasks
       }).save(),
       new Column({ title: "In progress", boardId: null, tasks: [] }).save(),
-      new Column({ title: "Done", boardId: null, tasks: [] }).save()
+      new Column({ title: "Done", boardId: null, tasks: [], done: true }).save()
     ]);
   
     // Create a new board
@@ -146,7 +146,7 @@ const register = async (req, res, next) => {
       });
 
   } catch(err){
-    res.status(401).json({ error: err.message })
+    res.status(402).json({ error: err.message })
   }
 };
 
@@ -154,13 +154,13 @@ const login = async (req, res, next) => {
   const { username, password } = req.body
 
   if (!username || !password){
-    res.status(401).json({message: "Send needed params"})
+    res.status(404).json({message: "Send needed params"})
     return
   }
   try {
     const user = await User.findOne({ username })
     if (!user){
-      return res.status(404).json({message: "Invalid username or password."})
+      return res.status(404).json({message: "Invalid username."})
     }
 
     if (!user.verified) {
@@ -170,7 +170,7 @@ const login = async (req, res, next) => {
     const passwordMatch = await user.comparePassword(password);
     console.log(passwordMatch)
     if (!passwordMatch){
-      return res.status(401).json({message: "Incorrect password"})
+      return res.status(404).json({message: "Incorrect password"})
     } 
 
     let options = {
@@ -221,7 +221,7 @@ const logout = async (req, res, next) => {
     const accessTokenCookie = cookies.find(cookie => cookie.startsWith('SessionID='));
 
     if (!accessTokenCookie) {
-      return res.status(401).json({ message: 'Invalid cookie format' });
+      return res.status(402).json({ message: 'Invalid cookie format' });
     }
 
     const cookie = accessTokenCookie.split('=')[1];
@@ -309,7 +309,7 @@ const confirmEmail = async (req, res) => {
 
   try {
     const decoded = jwt.verify(tokenParam, process.env.SECRET_KEY);
-    const userId = decoded.userId;
+    const userId = decoded.id;
     console.log(decoded)
     console.log(userId)
 

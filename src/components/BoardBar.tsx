@@ -20,12 +20,24 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import GroupIcon from '@mui/icons-material/Group';
 import SendIcon from '@mui/icons-material/Send';
 import StarIcon from '@mui/icons-material/Star';
+import { useAuth } from './AuthProvider';
 
 interface BoardBarProps {
     selectedBoard: Board,
     setSelectedBoard: (board: Board | null) => void,
-    members: User[],
-    setMembers: (users: User[]) => void
+    members: ExtendedUser[],
+    setMembers: (users: ExtendedUser[]) => void
+}
+
+interface ExtendedUser extends User {
+  totalPoints: number;
+  title: string;
+  pointsTillNext: number;
+  badgeImage: string;
+}
+
+type TitleImages = {
+  [key: string]: string;
 }
 
 const ListButton = styled(Button)`
@@ -33,9 +45,42 @@ const ListButton = styled(Button)`
     border-radius: 10px;
 
 `;
+
+const StyledDiv = styled.div`
+  display: flex;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 20px;
+  height: 80px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 800px) {
+    margin-left: -60px;
+    margin-top: 10px;
+  }
+`;
+
+const DueDateButton = styled.button`
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: none;
+  font-family: 'Poppins';
+  background-color: transparent;
+  cursor: pointer;
+  color: ${props => props.theme.palette === 'dark' ? 'white' : 'inherit'};
+  
+  &:hover {
+    background-color: rgba(126, 40, 255, 0.122);
+  }
+`;
+
 const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, members, setMembers }) => {
 
-  const user = useSelector((state: AppState) => state.currentUser)
+  const { user } = useAuth()
   const userId = user ? user?.id : ''
   const [isModified, setIsModified] = useState(false);
   const [loading, setLoading] = useState(true); 
@@ -43,7 +88,7 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
   const [isEditing, setIsEditing] = useState(false);
   const [boardName, setBoardName] = useState("")
   const dispatch = useDispatch();
-  const [boardUser, setBoardUser] = useState<User>()
+  const [boardUser, setBoardUser] = useState<ExtendedUser>()
   const [favorite, setFavorite] = useState(selectedBoard?.favorite);
   const [anchorBoard, setAnchorBoard] = useState<null | HTMLElement>(null);
   const [areYouSureButton, setAreYouSureButton] = useState(false);
@@ -51,7 +96,6 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
   const [seeMembers, setSeeMembers] = useState(false)
   const isBoardAdmin = user?.id === boardUser?.id
   const navigate = useNavigate()
-  const selectedBoardRedux = useSelector((state: AppState) => state.selectedBoard);
   const isArchived = selectedBoard?.archived ? true : false;
   const boards = useSelector((state: AppState) => state.boards);  
 
@@ -70,6 +114,7 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
     return () => clearTimeout(timeout);
 
   }, [selectedBoard?._id]);
+  
 
     const validationSchema = Yup.object().shape({
         email: Yup.string().email().required('email is required'),
@@ -176,10 +221,18 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
         setAnchorElUser(event.currentTarget);
       };
 
+      const titleImages: TitleImages = {
+        Novice: require('../images/novice.png'),
+        Explorer: require('../images/explorer.png'),
+        Challenger: require('../images/challenger.png'),
+        Wizard: require('../images/wizard.png'),
+    };
+
       const getMembers = async () => {
           for (const userId of selectedBoard?.members || []) {
             try {
               const res = await axios.get(`user/${userId}`);
+              const pointsRes = await axios.get(`/user/${userId}/points`);
               const userData = {
                 id: res.data._id,
                 username: res.data.username,
@@ -187,8 +240,14 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
                 lastName: res.data.lastName,
                 email: res.data.email,
                 color: res.data.color,
+                totalPoints: pointsRes.data.totalPoints,
+                title: pointsRes.data.title,
+                pointsTillNext: pointsRes.data.pointsTillNext,
+                badgeImage: titleImages[pointsRes.data.title] 
               };
+
               members.push(userData)
+              
       
               // if (! (members?.some(member => member.id === userData.id) || userData.id === selectedBoard?.user)) {
               //   setMembers((prevMembers) => [...(prevMembers || []), userData]);
@@ -203,14 +262,16 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
       };
     
       
-    const deleteMember = async (user: User) => {  
-    const userId = user.id
-    const boardId = selectedBoard?._id
-    const remainingMembers = members.filter((mem) => mem.id !== userId)
-    await axios.put(`/board/${boardId}`, {
-        members: remainingMembers
-    }).then(()=> {
-        toast.success(`Deleted user ${user.username} from board ${selectedBoard?.name}.`, {
+
+      const deleteMember = async (user: User) => {
+        const userId = user.id;
+        const boardId = selectedBoard?._id;
+        const remainingMembers = members.filter((mem) => mem.id !== userId);
+    
+        await axios.put(`/board/${boardId}`, {
+          members: remainingMembers
+        }).then(async () => {
+          toast.success(`Deleted user ${user.username} from board ${selectedBoard?.name}.`, {
             position: "bottom-right",
             autoClose: 3000,
             hideProgressBar: false,
@@ -219,18 +280,52 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
             progress: undefined,
             draggable: true,
             theme: "light",
-        });  
-        handleAreYouSureButtonClose()
-        setMembers(remainingMembers)
-        setSelectedBoard({...selectedBoard!, members: remainingMembers})
-        getMembers()
-        
-    })
-    }
+          });
+    
+          await deleteAssigneeFromTasks(user);
+          handleAreYouSureButtonClose();
+          setMembers(remainingMembers);
+          const updatedBoard = { ...selectedBoard, members: remainingMembers };
+          setSelectedBoard(updatedBoard);
+          dispatch(setSelectedBoardRedux(updatedBoard));
+          getMembers();
+        });
+      };
+    
+      const deleteAssigneeFromTasks = async (user: User) => {
+        const userId = user.id;
+        const updatePromises = selectedBoard.tasks.map(async (task) => {
+          if (task.assignee === userId) {
+            await axios.put(`/tasks/${task._id}`, {
+              assignee: null,
+            });
+          }
+        });
+    
+        await Promise.all(updatePromises).then(() => {
+          const updatedTasks = selectedBoard.tasks.map((task) => {
+            if (task.assignee === userId) {
+              return {
+                ...task,
+                assignee: null,
+              };
+            }
+            return task;
+          });
+    
+          const updatedBoard: Board = {
+            ...selectedBoard,
+            tasks: updatedTasks,
+          };
+    
+          setSelectedBoard(updatedBoard);
+          dispatch(setSelectedBoardRedux(updatedBoard));
+        });
+      };
 
   const handleDeleteBoard = async () => {
     const boardId = selectedBoard?._id;
-    await axios.delete(`http://localhost:5000/board/${boardId}`)
+    await axios.delete(`/board/${boardId}`)
       .then((res) => {
         toast.success('Board deleted successfully!', {
           position: "bottom-right",
@@ -308,6 +403,8 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
   const getUser = async (userId: string) => {
       try {
         const res = await axios.get(`http://localhost:5000/user/${userId}`);
+        const pointsRes = await axios.get(`/user/${userId}/points`);
+
         const userData = {
           id: res.data._id,
           username: res.data.username,
@@ -315,7 +412,12 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
           lastName: res.data.lastName,
           email: res.data.email,
           color: res.data.color,
+          totalPoints: pointsRes.data.totalPoints,
+          title: pointsRes.data.title,
+          pointsTillNext: pointsRes.data.pointsTillNext,
+          badgeImage: titleImages[pointsRes.data.title] 
         };
+
         setBoardUser(userData);
       } catch (err) {
         console.log(err);
@@ -328,16 +430,8 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
 
   return (
     <div>
-        <div style={{ borderBottom: '0.5px solid #ffffff73',}}>
-          <div style={{
-             display: 'flex', 
-             alignItems: 'center', 
-             alignContent: 'center', 
-             justifyContent: 'center', 
-             marginLeft: '20px',
-             marginTop: '20px',
-             height: '80px'
-            }}>
+        <div style={{ borderBottom: '0.5px solid #ffffff73', }}>
+          <StyledDiv>
             {
               isEditing ? (
                 <Input
@@ -473,24 +567,33 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
               onClose={handleCloseBoardDetails}
             >
                 {seeMembers ? (
-                  <Box sx={{ width: '350px', height: 'auto', padding: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+                  <Box sx={{ width: '400px', height: 'auto', padding: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
                     {members?.map((member, index) => {
                     return <>
                             <IconButton disableRipple onClick={handleOpenMembersMenu} sx={{width: '100%'}}>
                               <Avatar alt={member.firstName} src="/static/images/avatar/2.jpg" key={index} style={{ background: member.color }}>
                               {member?.firstName.charAt(0) + member?.lastName.charAt(0)}
                               </Avatar>
-                              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+                              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginRight: 10}}>
                                 <Typography variant='body1' ml={2}>{member?.firstName + " " + member?.lastName}</Typography>
                                 <Typography variant='subtitle2' ml={2}>{member?.email}</Typography>
+                                <div style={{display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginLeft: 18}}>
+                                  <img src={member?.badgeImage} width='20px' />
+                                  <Typography variant='subtitle2' fontWeight='bold'>{member?.totalPoints}p</Typography>
+                                </div>
                               </div>
+
                               <div style={{flexGrow: 1}}></div>
+
                               { isBoardAdmin 
                                 ? <IconButton onClick={handleAreYouSureButton} sx={{ ml: 'auto' }}>
                                     <Delete />
                                   </IconButton> 
                                 : null
                               }
+                                
+
+
                             </IconButton>
                             {
                               areYouSureButton ? (
@@ -511,13 +614,19 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
                     })}
                     
                     <IconButton disableRipple onClick={handleOpenMembersMenu}>
+                
                       <Avatar alt={boardUser?.firstName} src="/static/images/avatar/2.jpg" style={{ backgroundColor: boardUser?.color}}>
                         {boardUser ? boardUser?.firstName.charAt(0) + boardUser?.lastName.charAt(0)  : ''}
                       </Avatar>
-                      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+                      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginRight: 10}}>
                         <Typography variant='body1' ml={2}>{boardUser?.firstName + " " + boardUser?.lastName + ' (Admin)'}</Typography>
                         <Typography variant='subtitle2' ml={2}>{boardUser?.email}</Typography>
+                        <div style={{display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginLeft: 18}}>
+                                  <img src={boardUser?.badgeImage} width='20px' />
+                                  <Typography variant='subtitle2' fontWeight='bold'>{boardUser?.totalPoints}p</Typography>
+                                </div>
                       </div>
+                      
                     </IconButton>
                     <IconButton disableRipple onClick={() => setSeeMembers(false)} style={{marginTop: 10, marginLeft: 10}}><ArrowBackIosIcon /></IconButton>
                   </Box>
@@ -530,20 +639,20 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
                     <Typography style={{ alignSelf: 'center', marginBottom: '20px'}} variant='h6'>{selectedBoard.name}</Typography>
 
                     <ListItem>
-                      <ListButton onClick={() => setSeeMembers(true)}>
+                      <DueDateButton onClick={() => setSeeMembers(true)}>
                         <div style={{display: 'flex', alignContent: 'center', gap: 4}}>
                           <GroupIcon sx={{fontSize:'20px'}}/>
                           <Typography variant='body2'>See members</Typography>
                         </div>
-                      </ListButton>
+                      </DueDateButton>
                     </ListItem>
                             
                     <Divider />
                     <ListItem>
-                      <ListButton onClick={handleArchiveBoard}>{isArchived ? 'Unarchive' : 'Archive'}</ListButton>
+                      <DueDateButton onClick={handleArchiveBoard}>{isArchived ? 'Unarchive' : 'Archive'}</DueDateButton>
                     </ListItem>
                     <ListItem>
-                      <ListButton onClick={handleAreYouSureButton}>Delete</ListButton>
+                      <DueDateButton onClick={handleAreYouSureButton}>Delete</DueDateButton>
                     </ListItem> 
                     {
                       areYouSureButton ? (
@@ -565,9 +674,10 @@ const BoardBar:React.FC<BoardBarProps> = ( { selectedBoard, setSelectedBoard, me
                
             </Menu>
           </div>
+        </StyledDiv>
+          
           </div>
 
-        </div>
       
     </div>
   )

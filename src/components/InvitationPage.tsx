@@ -1,7 +1,7 @@
 import { Box, Card, CircularProgress, } from '@mui/material';
 import axios from 'axios'
 import { useEffect, useState } from 'react'
-import { useDispatch, } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import {  useParams } from 'react-router'
 import { Link } from 'react-router-dom';
 import { CSSProperties } from 'styled-components';
@@ -112,7 +112,7 @@ const InvitationPage = () => {
                             ) : (isCheckedReset) ? (
                             <ForgotPassword handleToggleReset={handleToggleReset} landingEmail=''/>
                             ): (!isChecked && !isCheckedReset ) ? (
-                            <Login handleToggle={handleToggle} handleToggleReset={handleToggleReset} boardId={""}/>
+                            <Login handleToggle={handleToggle} handleToggleReset={handleToggleReset} boardId={params.boardId || ''}/>
                             ) : null}
                         </Box>
                     </Card>

@@ -8,10 +8,6 @@ export const Box = styled.div`
 	padding: 20px;
 	background: #9599ff3b;
 	bottom: 0;
-
-	@media (max-width: 1000px) {
-		// padding: 70px 30px;
-	}
 `;
 
 export const FooterContainer = styled.div`

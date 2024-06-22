@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { StyledButton } from './AppMenuBar';
 import axios from 'axios';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppState, logoutAction, setCurrentUser } from '../store';
+import { useDispatch } from 'react-redux';
+import { logoutAction, setCurrentUser } from '../store';
 import { toast } from 'react-toastify';
 import { useLocation, useNavigate } from 'react-router';
 import { Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { useAuth } from './AuthProvider';
 
 const Profile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate()
-  const user = useSelector((state: AppState) => state.currentUser);
-  const [userAfterLogout, setUserAfterLogout] = useState(user);
-  const [totalPoints, setTotalPoints] = useState(0);
+  const { user, setUser } = useAuth()
   const [title, setTitle] = useState('');
   const [badgeImage, setBadgeImage] = useState('');
   const location = useLocation()
@@ -35,8 +34,8 @@ const Profile = () => {
                 });
 
             dispatch(logoutAction())
-            setUserAfterLogout(res.data.user)
             dispatch(setCurrentUser(null))
+            setUser(null)
             navigate('/landing')
         })
         .catch(err => console.log(err.message));
@@ -57,7 +56,6 @@ const Profile = () => {
     const fetchPoints = async () => {
       try {
         const response = await axios.get(`user/${user?.id}/points`);
-        setTotalPoints(response.data.totalPoints);
         setTitle(response.data.title);
         setBadgeImage(titleImages[response.data.title])
       } catch (error) {
@@ -70,7 +68,7 @@ const Profile = () => {
 
   return (
     <div>
-      { userAfterLogout ?  
+      { user ?  
       <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 6}}>
         <Typography variant='h5'>Hello, {user?.firstName}!</Typography>
         <Typography variant='subtitle2'>Current title</Typography>

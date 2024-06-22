@@ -9,7 +9,6 @@ interface AppState {
   currentUser: User | null;
   selectedBoard: Board | null;
   boards: Board[] | null;
-  updateBoardNameInStore: Board | null;
 }
 
 interface User {
@@ -27,17 +26,14 @@ const initialState: AppState = {
   currentUser: null,
   selectedBoard: null,
   boards: null,
-  updateBoardNameInStore: null
 };
 
 
-// Define actions
 const loginAction = createAction<User>('LOGIN');
 const registerAction = createAction('REGISTER');
 const logoutAction = createAction('LOGOUT');
-const setSelectedBoardRedux = createAction<Board | null>('SET_SELECTED_BOARD'); // Define action for setting selected board
+const setSelectedBoardRedux = createAction<Board | null>('SET_SELECTED_BOARD'); 
 const setBoards = createAction<Board[] | null>('SET_BOARDS');
-const updateBoardNameInStore = createAction<Board>('UPDATE_BOARD_NAME');
 const setCurrentUser = createAction<User | null>('SET_CURRENT_USER');
 
 export const fetchBoard = createAsyncThunk('board/fetchBoard', async (boardId: string) => {
@@ -45,7 +41,6 @@ export const fetchBoard = createAsyncThunk('board/fetchBoard', async (boardId: s
   return response.data;
 });
 
-// Define reducer
 const rootReducer = createReducer(initialState, (builder) => {
   builder
     .addCase(loginAction, (state, action) => {
@@ -72,12 +67,11 @@ const rootReducer = createReducer(initialState, (builder) => {
     })
 });
 
-// Create Redux store
 const store = configureStore({
   reducer: rootReducer,
 });
 
 export type { AppState };
-export { loginAction, registerAction, logoutAction, setSelectedBoardRedux, setBoards, updateBoardNameInStore, setCurrentUser }; // Export actions
+export { loginAction, registerAction, logoutAction, setSelectedBoardRedux, setBoards, setCurrentUser }; 
 
 export default store;

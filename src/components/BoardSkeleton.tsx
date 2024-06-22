@@ -1,6 +1,4 @@
 import { Skeleton } from '@mui/material'
-import React from 'react'
-import { ColumnContainer } from './BoardComponents'
 
 const BoardSkeleton = () => {
   return (
@@ -25,14 +23,16 @@ const BoardSkeleton = () => {
         </div>
 
         <div style={{
-            display: 'flex',
-            padding: 30,
-            gap: 20
+            display: 'grid',
+            gridAutoFlow: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+            padding: '20px'
         }}>
-                <Skeleton variant="rounded" width={300} height={500} sx={{ borderRadius: 4}} />
-                <Skeleton variant="rounded" width={300} height={350} sx={{ borderRadius: 4}}/>
-                <Skeleton variant="rounded" width={300} height={400} sx={{ borderRadius: 4}}/>
-                <Skeleton variant="rounded" width={300} height={50} sx={{ borderRadius: 4}}/>
+                <Skeleton variant="rounded" width={300} height={500} sx={{ borderRadius: '20px', padding: '10px', margin: '10px'}} />
+                <Skeleton variant="rounded" width={300} height={350} sx={{ borderRadius: '20px', padding: '10px', margin: '10px'}}/>
+                <Skeleton variant="rounded" width={300} height={400} sx={{ borderRadius: '20px', padding: '10px', margin: '10px'}}/>
+                <Skeleton variant="rounded" width={300} height={30} sx={{ borderRadius: '20px', padding: '10px', margin: '10px'}}/>
             
         </div>
     </div>

@@ -15,7 +15,7 @@
   import ReactQuill from 'react-quill';
   import StarIcon from '@mui/icons-material/Star';
   import { Board } from './Home';
-  import { useDispatch, useSelector } from 'react-redux';
+  import { useDispatch } from 'react-redux';
   import {AppState, setSelectedBoardRedux } from '../store';
   import GroupIcon from '@mui/icons-material/Group';
   import { User } from '../App';
@@ -24,6 +24,7 @@
   import 'react-quill/dist/quill.bubble.css'
   import SmsIcon from '@mui/icons-material/Sms';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import { useAuth } from './AuthProvider';
 
   interface ContainerProps {
     isdragging: boolean;
@@ -95,9 +96,9 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
     const [commentValue, setCommentValue] = useState('')
     const [commentDisabled, setCommentDisabled] = useState(true)
     const [comments, setComments] = useState<Comment[]>([])
-    const currentUser = useSelector((state: AppState) => state.currentUser);
+    const { user } = useAuth()
 
-    const isMyTask = task.assignee === currentUser?.id && task.done;
+    const isMyTask = task.assignee === user?.id && task.done;
     
     useEffect(() => {
       axios.get(`/board/${selectedBoard?._id}`)
@@ -109,7 +110,10 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
 
     }, [selectedBoard, task._id])
 
+
+
     useEffect(() => {
+      console.log(task.assignee)
       if (selectedBoard?.user){
         getUser(selectedBoard?.user).then((res) => setBoardUser({
           id: res._id,
@@ -124,8 +128,11 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
         getUser(task.assignee).then((res) =>{
           setAssigneeUser(res)
         } )
+      } else {
+        // updateTask(task.title, task.description, task.dueDate, task.points, null);
+        setAssigneeUser(null)
       }
-    }, [selectedBoard?._id])
+    }, [selectedBoard?._id, task.assignee])
 
     const handleOpen = async () => {
       setOpen(true);
@@ -353,7 +360,7 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
 
   const handleCommentPost = async () => {
     const content = commentValue
-    const userId = currentUser?.id
+    const userId = user?.id
     const taskId = task._id
     const createdAt = new Date(Date.now())
 
@@ -463,7 +470,7 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
             {task.title}
           </Typography>
           {isMyTask ? (
-            <Tooltip title={'Congrats! You got ' + task.points + ' points for this task.'}>
+            <Tooltip title={ task.points ? 'Congrats! You got ' + task.points + ' points for this task.' : "You didn't get any points for this task :("}>
               <AutoAwesome fontSize='small' sx={{color: 'rgba(0, 0, 0, 0.482)'}} />
             </Tooltip>
           ) : null}
@@ -486,7 +493,7 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
           ) : null
         }
         {
-          task.assignee ? (
+          assigneeUser ? (
               <Avatar alt={assigneeUser ? assigneeUser?.firstName + assigneeUser?.lastName : ''} src="/static/images/avatar/2.jpg" style={{ width: '24px', height: '24px', fontSize: '14px', marginRight: 4, backgroundColor: assigneeUser?.color }}>
                 {assigneeUser ? assigneeUser?.firstName.charAt(0) + assigneeUser?.lastName.charAt(0) : ''}
               </Avatar>
@@ -553,6 +560,7 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
                         label="Due date" 
                         value={dayjs(formik.values.dueDate)}
                         onChange={handleDueDateChange}
+                        minDate={dayjs()}
                         sx={{ width: '100%', backgroundColor:'rgba(145, 205, 245, 0.092)'}}
                       />
                     </LocalizationProvider>
@@ -654,8 +662,8 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
 
           <div  style={{ display: 'flex', alignItems: 'center', gap: 10}}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
-              <Avatar alt={currentUser?.username} src="/static/images/avatar/2.jpg" style={{ width: '30px', height: '30px', marginRight: 4, backgroundColor: currentUser?.color }}>
-                {currentUser ? currentUser.firstName.charAt(0) + currentUser.lastName.charAt(0) : ''}
+              <Avatar alt={user?.username} src="/static/images/avatar/2.jpg" style={{ width: '30px', height: '30px', marginRight: 4, backgroundColor: user?.color }}>
+                {user ? user.firstName.charAt(0) + user.lastName.charAt(0) : ''}
               </Avatar>
               <TextField 
                 variant='standard' 
@@ -672,10 +680,10 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
               disabled={commentDisabled}
               sx={{ 
                 marginLeft: 'auto', 
-                backgroundColor: commentDisabled ? 'rgba(56, 56, 56, 0.121)' : currentUser?.color, 
+                backgroundColor: commentDisabled ? 'rgba(56, 56, 56, 0.121)' : user?.color, 
                 color: 'white',
                 ":hover": {
-                  backgroundColor: currentUser ? darken(currentUser.color, 0.2) : 'inherit',
+                  backgroundColor: user ? darken(user.color, 0.2) : 'inherit',
                 }     
               }}
               >
@@ -698,10 +706,10 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
                       disabled={!isModified}
                       sx={{ 
                         marginRight: 'auto', 
-                        backgroundColor: !isModified ? 'rgba(19, 19, 19, 0.416)' : currentUser?.color, 
+                        backgroundColor: !isModified ? 'rgba(19, 19, 19, 0.416)' : user?.color, 
                         color: 'white',
                         ":hover": {
-                          backgroundColor: currentUser ? darken(currentUser.color, 0.2) : 'inherit',
+                          backgroundColor: user ? darken(user.color, 0.2) : 'inherit',
                         }                    
                       }}
                   >

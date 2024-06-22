@@ -85,7 +85,7 @@ const TaskList = styled.div<TaskListProps>`
   transition: background-color 0.2s ease;
   flex-grow: 1;
   position: relative;
-  max-height: 60vh;
+  max-height: 56vh;
   overflow-y: auto; 
 `;
 
@@ -102,7 +102,7 @@ const DueDateButton = styled.button`
   font-family: 'Poppins';
   background-color: transparent;
   cursor: pointer;
-  color: ${props => props.theme.palette === 'dark' ? 'white' : 'inherit'}; // Setează culoarea textului în funcție de tema selectată
+  color: ${props => props.theme.palette === 'dark' ? 'white' : 'inherit'};
   
   &:hover {
     background-color: rgba(126, 40, 255, 0.122);
@@ -380,47 +380,60 @@ const handleCloseColumnDetails = () => {
     setAreYouSureButton(false);
   };
 
-  
   const handleDeleteColumn = async () => {
     const boardId = props.selectedBoard?._id;
-    await axios.delete(`/column/${column._id}/${boardId}`)
-      .then((res) => {
-        toast.success('Column deleted successfully!', {
-          position: "bottom-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          progress: undefined,
-          draggable: true,
-          theme: "light",
-        });
-        const id = res.data.data._id;
-
-        const updatedColumns = props.selectedBoard?.columns.filter(col => col._id !== id);
-
-        props.setSelectedBoard({
-          ...props.selectedBoard!,
-          columns: updatedColumns || []
-        });
   
+    try {
+      const tasks = props.selectedBoard?.tasks.filter(task => task.columnId === column._id);
   
-        dispatch(setSelectedBoardRedux(props.selectedBoard))
-        handleAreYouSureButtonClose();
-      }).catch((err) => {
-        console.log(err);
-        toast.error('An error occurred while deleting the column. Please try again later.', {
-          position: "bottom-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          progress: undefined,
-          draggable: true,
-          theme: "light",
-        });
+      if (tasks && tasks.length > 0) {
+        await Promise.all(tasks.map(task => axios.delete(`/tasks/${task._id}/${boardId}`)));
+      }
+  
+      await axios.delete(`/column/${column._id}/${boardId}`);
+  
+      toast.success('Column and tasks deleted successfully!', {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        progress: undefined,
+        draggable: true,
+        theme: "light",
       });
-  };
+  
+      const updatedColumns = props.selectedBoard?.columns.filter(col => col._id !== column._id);
+  
+      const updatedTasks = props.selectedBoard?.tasks.filter(task => task.columnId !== column._id);
+  
+      props.setSelectedBoard({
+        ...props.selectedBoard!,
+        columns: updatedColumns || [],
+        tasks: updatedTasks || []
+      });
+  
+      dispatch(setSelectedBoardRedux({
+        ...props.selectedBoard!,
+        columns: updatedColumns || [],
+        tasks: updatedTasks || []
+      }));
+  
+      handleAreYouSureButtonClose();
+    } catch (err) {
+      console.log(err);
+      toast.error('An error occurred while deleting the column and tasks. Please try again later.', {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        progress: undefined,
+        draggable: true,
+        theme: "light",
+      });
+    }
+  };  
   
 
   return (
